@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://sbg4utrtys7d"]
+
+[ext_resource type="Script" path="res://scripts/scenes/hub.gd" id="1_hub"]
+
+[node name="Hub" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1_hub")

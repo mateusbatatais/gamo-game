@@ -1,0 +1,23 @@
+# Godot 4
+.godot/
+.import/
+export/
+*.translation
+
+# Builds
+build/
+dist/
+*.exe
+*.app
+*.dmg
+*.pck
+*.zip
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

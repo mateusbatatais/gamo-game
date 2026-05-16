@@ -1,0 +1,166 @@
+## Classe base de inimigo (Glitch).
+## Cada variação (Artifact, Tear, Null) estende esta e sobrescreve _build_visual + comportamento.
+class_name Enemy
+extends CharacterBody2D
+
+@export var max_hp: int = 10
+@export var contact_damage: int = 5
+@export var move_speed: float = 56.0
+@export var xp_value: int = 1
+@export var token_value: int = 1
+@export var body_radius: float = 6.0
+@export var sprite_scale: float = 2.0
+## Cor base usada pra explosão de partículas ao morrer. Inimigos podem sobrescrever
+## no _ready/_build_visual chamando set_death_color() pra combinar com a paleta deles.
+@export var death_color: Color = Color("#9bbc0f")
+## Chance (0..1) de dropar pickup de vida ao morrer. Stains/projéteis-living deixam em 0.
+@export var health_drop_chance: float = 0.05
+## Chance (0..1) de dropar power-up raro ao morrer. Aprox 1 a cada 130 kills.
+@export var power_up_drop_chance: float = 0.008
+
+var current_hp: int
+var sprite: AnimatedSprite2D
+var _flash_timer: float = 0.0
+
+
+func _ready() -> void:
+	add_to_group("enemies")
+	collision_layer = 8
+	collision_mask = 1  # apenas world; player é detectado via Area2D hurtbox
+	current_hp = max_hp
+	_build_shape()
+	_build_visual()
+	EventBus.enemy_spawned.emit(self)
+
+
+func _build_shape() -> void:
+	var shape := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	circle.radius = body_radius
+	shape.shape = circle
+	add_child(shape)
+
+
+## Override por subclasses.
+func _build_visual() -> void:
+	sprite = AnimatedSprite2D.new()
+	sprite.centered = true
+	sprite.scale = Vector2(sprite_scale, sprite_scale)
+	add_child(sprite)
+
+
+func _physics_process(delta: float) -> void:
+	_chase_player(delta)
+	_update_flash(delta)
+	move_and_slide()
+
+
+func _chase_player(_delta: float) -> void:
+	# Freeze power-up congela todos os inimigos.
+	if GameState.is_enemies_frozen():
+		velocity = Vector2.ZERO
+		return
+	var player := _find_player()
+	if player == null:
+		velocity = Vector2.ZERO
+		return
+	var dir := (player.global_position - global_position)
+	if dir.length_squared() > 0.01:
+		velocity = dir.normalized() * move_speed
+	else:
+		velocity = Vector2.ZERO
+
+
+func _find_player() -> Node2D:
+	var players := get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return null
+	return players[0] as Node2D
+
+
+func _update_flash(delta: float) -> void:
+	if sprite == null:
+		return
+	if _flash_timer > 0.0:
+		_flash_timer -= delta
+		sprite.modulate = Color(2.5, 2.5, 2.5, 1.0)
+	elif GameState.is_enemies_frozen():
+		# Tint azul-claro de "congelado" durante o power-up FREEZE.
+		sprite.modulate = Color(0.55, 0.85, 1.6, 1.0)
+	else:
+		sprite.modulate = Color.WHITE
+
+
+## take_damage agora aceita parâmetros opcionais para knockback (não usado pelos
+## inimigos comuns) e flag de crit pra cor/tamanho diferente do damage number.
+func take_damage(amount: int, _knockback_dir: Vector2 = Vector2.ZERO, is_crit: bool = false) -> void:
+	var dealt: int = min(current_hp, amount)
+	current_hp -= amount
+	GameState.register_damage_dealt(dealt)
+	_flash_timer = 0.10 if is_crit else 0.06
+	_spawn_damage_number(amount, is_crit)
+	# Crits dão hit-stop curto pra dar peso ao impacto.
+	if is_crit:
+		HitStop.freeze()
+	if current_hp <= 0:
+		_die()
+
+
+func _spawn_damage_number(amount: int, is_crit: bool) -> void:
+	if amount <= 0:
+		return
+	var dn := DamageNumber.new()
+	# Offset aleatório pequeno pra números não se sobreporem quando vários hits caem juntos.
+	dn.global_position = global_position + Vector2(
+		randf_range(-4.0, 4.0), -8.0 + randf_range(-4.0, 4.0)
+	)
+	dn.setup(amount, is_crit)
+	get_parent().add_child(dn)
+
+
+func _die() -> void:
+	Audio.play(Audio.Sfx.ENEMY_DIE)
+	GameState.register_kill()
+	GameState.grant_tokens(token_value)
+	EventBus.enemy_killed.emit(self, xp_value)
+	_spawn_death_particles()
+	_drop_xp_gem()
+	_maybe_drop_health()
+	_maybe_drop_power_up()
+	queue_free()
+
+
+func _drop_xp_gem() -> void:
+	var gem := XpGem.new()
+	gem.value = xp_value
+	gem.global_position = global_position
+	get_parent().add_child(gem)
+
+
+func _spawn_death_particles() -> void:
+	var particles := DeathParticle.new()
+	particles.global_position = global_position
+	particles.setup(death_color)
+	get_parent().add_child(particles)
+
+
+func _maybe_drop_health() -> void:
+	if health_drop_chance <= 0.0:
+		return
+	if randf() > health_drop_chance:
+		return
+	var pickup := HealthPickup.new()
+	pickup.global_position = global_position
+	get_parent().add_child(pickup)
+
+
+func _maybe_drop_power_up() -> void:
+	if power_up_drop_chance <= 0.0:
+		return
+	if randf() > power_up_drop_chance:
+		return
+	var p := PowerUp.new()
+	# Sorteia entre os 3 tipos de power-up.
+	p.kind = randi() % 3
+	p.global_position = global_position
+	get_parent().add_child(p)
