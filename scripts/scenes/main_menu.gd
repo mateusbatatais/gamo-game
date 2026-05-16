@@ -1,19 +1,24 @@
-## Tela de menu principal — agora com intro animada estilo SNES:
-##   - Estrelas parallax no fundo
-##   - Logo do título cai do topo com bounce
-##   - Subtítulo escreve com typewriter
-##   - "PRESS START" piscando
-##   - Mascote GAMO no canto
+## Tela de menu principal — layout limpo SNES:
+##   - Título com frame chunky, duas linhas em duas cores (verde+amarelo)
+##   - Tagline "by gamo.games" abaixo do título com typewriter
+##   - Mascote GAMO grande e centralizado (hero pose)
+##   - 3 botões em linha horizontal abaixo do mascote
+##   - "PRESS START" piscando + stats no rodapé
 extends Control
 
-const TITLE_COLOR := Color("#9bbc0f")
-const SUB_COLOR := Color("#ffeb3b")
+const TITLE_GREEN := Color("#9bbc0f")
+const TITLE_YELLOW := Color("#ffeb3b")
+const TITLE_GREEN_OUTLINE := Color("#306230")
+const TITLE_YELLOW_OUTLINE := Color("#5a3f10")
 
-var _title_label: Label
+var _title_panel: Panel
+var _line1: Label
+var _line2: Label
 var _press_start_label: Label
-var _vbox: VBoxContainer
+var _hbox: HBoxContainer
 var _stars_layer: Node2D
 var _tagline: TypewriterLabel
+var _mascot: AnimatedSprite2D
 var _press_start_phase: float = 0.0
 var _intro_complete: bool = false
 
@@ -26,22 +31,27 @@ func _ready() -> void:
 
 
 func _play_intro() -> void:
-	# Botões começam escondidos, aparecem após a animação.
-	_vbox.modulate.a = 0.0
-	# Título cai do topo com bounce.
-	_title_label.position.y = -120
+	# Elementos começam escondidos, aparecem após a animação.
+	_hbox.modulate.a = 0.0
+	_mascot.modulate.a = 0.0
+	# Título desce do topo com bounce.
+	_title_panel.position.y = -130
 	var tween := create_tween().set_parallel(true)
-	tween.tween_property(_title_label, "position:y", 40.0, 0.7) \
+	tween.tween_property(_title_panel, "position:y", 8.0, 0.7) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BOUNCE)
-	# Tagline typewriter logo após o título cair.
+	# Tagline typewriter após o título.
 	var tag_timer := create_tween()
 	tag_timer.tween_interval(0.55)
 	tag_timer.tween_callback(func(): _tagline.type_text("by gamo.games", 0.06))
-	# Botões fazem fade-in depois do título.
+	# Mascote fade-in junto com a tagline.
+	var mascot_fade := create_tween()
+	mascot_fade.tween_interval(0.6)
+	mascot_fade.tween_property(_mascot, "modulate:a", 1.0, 0.5)
+	# Botões aparecem por último.
 	var fade := create_tween()
-	fade.tween_interval(0.9)
-	fade.tween_property(_vbox, "modulate:a", 1.0, 0.4)
+	fade.tween_interval(1.0)
+	fade.tween_property(_hbox, "modulate:a", 1.0, 0.4)
 	fade.tween_callback(_on_intro_complete)
 
 
@@ -51,15 +61,16 @@ func _on_intro_complete() -> void:
 
 func _build() -> void:
 	var bg := ColorRect.new()
-	bg.color = Color("#0a0a14")
+	bg.color = Color("#050510")
 	bg.anchor_right = 1.0
 	bg.anchor_bottom = 1.0
 	add_child(bg)
 
-	# Estrelas parallax animadas (2 camadas em velocidades diferentes).
+	# Estrelas parallax animadas no fundo.
 	_stars_layer = _MenuStars.new()
 	add_child(_stars_layer)
 
+	# Scanlines globais leves
 	var scanlines := Sprite2D.new()
 	scanlines.texture = _make_scanline_texture()
 	scanlines.region_enabled = true
@@ -68,79 +79,92 @@ func _build() -> void:
 	scanlines.modulate = Color(1, 1, 1, 0.18)
 	add_child(scanlines)
 
-	# Mascote GAMO no canto inferior-direito (sprite animado tier 1).
-	var mascot := AnimatedSprite2D.new()
-	mascot.sprite_frames = Sprites.make_animation(
-		Sprites.GAMO_T1_IDLE, Sprites.PALETTE_GAMO, 2.4
+	# --- Título com frame chunky e duas cores ---
+	_title_panel = Panel.new()
+	_title_panel.anchor_left = 0.5
+	_title_panel.anchor_right = 0.5
+	_title_panel.position = Vector2(-220, 8)
+	_title_panel.size = Vector2(440, 96)
+	_title_panel.pivot_offset = Vector2(220, 48)
+	var title_sb := PanelFrames.chunky(
+		Color(0.0, 0.05, 0.02, 0.85),
+		TITLE_GREEN,
+		TITLE_GREEN_OUTLINE
 	)
-	mascot.play("default")
-	mascot.centered = true
-	mascot.scale = Vector2(3.0, 3.0)
-	mascot.position = Vector2(540, 280)
-	add_child(mascot)
+	_title_panel.add_theme_stylebox_override("panel", title_sb)
+	add_child(_title_panel)
 
-	_title_label = Label.new()
-	_title_label.text = I18n.t("menu_title")
-	_title_label.add_theme_font_size_override("font_size", 44)
-	_title_label.add_theme_color_override("font_color", TITLE_COLOR)
-	_title_label.add_theme_color_override("font_outline_color", Color("#306230"))
-	_title_label.add_theme_constant_override("outline_size", 4)
-	_title_label.anchor_left = 0.5
-	_title_label.anchor_right = 0.5
-	_title_label.anchor_top = 0.0
-	_title_label.anchor_bottom = 0.0
-	_title_label.position = Vector2(-160, 40)
-	_title_label.size = Vector2(320, 120)
-	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.pivot_offset = Vector2(160, 60)
-	add_child(_title_label)
+	_line1 = Label.new()
+	_line1.text = "CARTRIDGE"
+	_line1.add_theme_font_size_override("font_size", 36)
+	_line1.add_theme_color_override("font_color", TITLE_GREEN)
+	_line1.add_theme_color_override("font_outline_color", TITLE_GREEN_OUTLINE)
+	_line1.add_theme_constant_override("outline_size", 4)
+	_line1.position = Vector2(0, 4)
+	_line1.size = Vector2(440, 42)
+	_line1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_line1.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_title_panel.add_child(_line1)
 
-	var subtitle := Label.new()
-	subtitle.text = I18n.t("menu_version")
-	subtitle.add_theme_font_size_override("font_size", 14)
-	subtitle.add_theme_color_override("font_color", SUB_COLOR)
-	subtitle.anchor_left = 0.5
-	subtitle.anchor_right = 0.5
-	subtitle.position = Vector2(-80, 164)
-	subtitle.size = Vector2(160, 20)
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	add_child(subtitle)
+	_line2 = Label.new()
+	_line2.text = "CRUSADE"
+	_line2.add_theme_font_size_override("font_size", 36)
+	_line2.add_theme_color_override("font_color", TITLE_YELLOW)
+	_line2.add_theme_color_override("font_outline_color", TITLE_YELLOW_OUTLINE)
+	_line2.add_theme_constant_override("outline_size", 4)
+	_line2.position = Vector2(0, 48)
+	_line2.size = Vector2(440, 42)
+	_line2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_line2.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_title_panel.add_child(_line2)
 
-	# Tagline typewriter pra reforçar a marca Gamo.
+	# Tagline typewriter logo abaixo do título (sem overlap com botões).
 	_tagline = TypewriterLabel.new()
-	_tagline.add_theme_font_size_override("font_size", 11)
+	_tagline.add_theme_font_size_override("font_size", 12)
 	_tagline.add_theme_color_override("font_color", Color("#00e5ff"))
 	_tagline.add_theme_color_override("font_outline_color", Color.BLACK)
 	_tagline.add_theme_constant_override("outline_size", 2)
 	_tagline.anchor_left = 0.5
 	_tagline.anchor_right = 0.5
-	_tagline.position = Vector2(-140, 184)
+	_tagline.position = Vector2(-140, 112)
 	_tagline.size = Vector2(280, 16)
 	_tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_tagline)
 
-	_vbox = VBoxContainer.new()
-	_vbox.anchor_left = 0.5
-	_vbox.anchor_right = 0.5
-	_vbox.position = Vector2(-80, 192)
-	_vbox.size = Vector2(160, 80)
-	_vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_vbox.add_theme_constant_override("separation", 8)
-	add_child(_vbox)
+	# --- Mascote GAMO grande e centralizado (hero pose, sem aura quadrada) ---
+	_mascot = AnimatedSprite2D.new()
+	_mascot.sprite_frames = Sprites.make_animation(
+		Sprites.GAMO_T1_IDLE, Sprites.PALETTE_GAMO, 2.4
+	)
+	_mascot.play("default")
+	_mascot.centered = true
+	_mascot.scale = Vector2(4.0, 4.0)
+	_mascot.position = Vector2(320, 200)
+	add_child(_mascot)
+
+	# --- Botões em linha horizontal abaixo do mascote ---
+	_hbox = HBoxContainer.new()
+	_hbox.anchor_left = 0.5
+	_hbox.anchor_right = 0.5
+	_hbox.position = Vector2(-220, 260)
+	_hbox.size = Vector2(440, 32)
+	_hbox.add_theme_constant_override("separation", 12)
+	_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	add_child(_hbox)
 
 	var play_btn := _make_button(I18n.t("menu_play"))
 	play_btn.pressed.connect(_on_play)
-	_vbox.add_child(play_btn)
+	_hbox.add_child(play_btn)
 
 	var options_btn := _make_button(I18n.t("menu_options"))
 	options_btn.pressed.connect(_on_options)
-	_vbox.add_child(options_btn)
+	_hbox.add_child(options_btn)
 
 	var quit_btn := _make_button(I18n.t("menu_quit"))
 	quit_btn.pressed.connect(_on_quit)
-	_vbox.add_child(quit_btn)
+	_hbox.add_child(quit_btn)
 
-	# "PRESS START" piscando logo abaixo dos botões
+	# "PRESS START" piscando no rodapé
 	_press_start_label = Label.new()
 	_press_start_label.text = "►  PRESS START  ◄"
 	_press_start_label.add_theme_font_size_override("font_size", 12)
@@ -149,30 +173,32 @@ func _build() -> void:
 	_press_start_label.add_theme_constant_override("outline_size", 2)
 	_press_start_label.anchor_left = 0.5
 	_press_start_label.anchor_right = 0.5
-	_press_start_label.position = Vector2(-110, 300)
+	_press_start_label.position = Vector2(-110, 304)
 	_press_start_label.size = Vector2(220, 16)
 	_press_start_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_press_start_label)
 
+	# Stats discreto no rodapé esquerdo
 	var stats := Label.new()
 	stats.text = _format_stats()
-	stats.add_theme_font_size_override("font_size", 12)
-	stats.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	stats.add_theme_font_size_override("font_size", 10)
+	stats.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
 	stats.anchor_top = 1.0
 	stats.anchor_bottom = 1.0
-	stats.position = Vector2(8, -32)
-	stats.size = Vector2(400, 28)
+	stats.position = Vector2(8, -16)
+	stats.size = Vector2(440, 12)
 	add_child(stats)
 
+	# Hint de controles no rodapé direito
 	var hint := Label.new()
 	hint.text = I18n.t("menu_controls_hint")
-	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4))
+	hint.add_theme_font_size_override("font_size", 10)
+	hint.add_theme_color_override("font_color", Color(0.4, 0.4, 0.45))
 	hint.anchor_top = 1.0
 	hint.anchor_bottom = 1.0
 	hint.anchor_right = 1.0
-	hint.position = Vector2(-320, -16)
-	hint.size = Vector2(312, 16)
+	hint.position = Vector2(-260, -16)
+	hint.size = Vector2(252, 12)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(hint)
 
@@ -226,8 +252,8 @@ class _MenuStars extends Node2D:
 func _make_button(text: String) -> Button:
 	var btn := Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(160, 28)
-	btn.add_theme_font_size_override("font_size", 18)
+	btn.custom_minimum_size = Vector2(130, 32)
+	btn.add_theme_font_size_override("font_size", 16)
 
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.1, 0.12, 0.18, 1.0)

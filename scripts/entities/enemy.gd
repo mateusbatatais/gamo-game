@@ -30,7 +30,31 @@ func _ready() -> void:
 	current_hp = max_hp
 	_build_shape()
 	_build_visual()
+	# Registra encontro no codex (id derivado do class_name).
+	var codex_id: String = _codex_id()
+	if codex_id != "":
+		GameState.register_encounter(codex_id)
 	EventBus.enemy_spawned.emit(self)
+
+
+## Cada subclasse pode sobrescrever pra mapear pro id do codex.
+## Por default usa get_script().get_global_name() em snake_case.
+func _codex_id() -> String:
+	# Object.get_script() retorna Variant (qualquer Resource), por isso o tipo explícito.
+	var script: Script = get_script() as Script
+	if script == null:
+		return ""
+	var class_id: String = script.get_global_name()
+	if class_id == "":
+		return ""
+	# CamelCase → snake_case (Artifact → artifact, MiniBoss → mini_boss)
+	var out: String = ""
+	for i in class_id.length():
+		var c: String = class_id[i]
+		if i > 0 and c.to_upper() == c and c.to_lower() != c:
+			out += "_"
+		out += c.to_lower()
+	return out
 
 
 func _build_shape() -> void:

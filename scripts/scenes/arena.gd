@@ -154,6 +154,11 @@ func _connect_signals() -> void:
 
 func _on_boss_warning_music() -> void:
 	Music.play_boss()
+	_spawn_dialog(
+		"ALERTA CRÍTICO",
+		"Corruption nível máximo. Boss se materializando em 10s.",
+		Color("#ff5252")
+	)
 
 
 func _on_power_up_collected(kind: int) -> void:
@@ -219,17 +224,30 @@ func _check_mini_boss_spawn() -> void:
 			continue
 		if GameState.run_time >= MINI_BOSS_TIMES[i]:
 			_mini_boss_spawned[i] = true
-			_spawn_mini_boss()
+			_spawn_mini_boss(i)
 			EventBus.mini_boss_spawned.emit()
 
 
-func _spawn_mini_boss() -> void:
+func _spawn_mini_boss(wave_index: int = 0) -> void:
 	var mb := MiniBoss.new()
-	# Spawna numa borda aleatória da arena, fora da câmera por um instante.
 	var origin := ArenaBounds.random_spawn_point(40.0)
 	mb.global_position = origin
 	_entity_root.add_child(mb)
 	trigger_shake(5.0, 0.35)
+	# Diálogo contextual variando por wave.
+	var quotes := [
+		"Pico de corrupção detectado. Sentinel se manifesta.",
+		"Outra anomalia. O Glitch está se adaptando.",
+		"Sentinel reforçado. Última onda antes do núcleo.",
+	]
+	var quote: String = quotes[clampi(wave_index, 0, quotes.size() - 1)]
+	_spawn_dialog("GAMO.SYS", quote, Color("#e040fb"))
+
+
+func _spawn_dialog(speaker: String, message: String, accent: Color) -> void:
+	var dlg := DialogBox.new()
+	add_child(dlg)
+	dlg.show_message(speaker, message, accent)
 
 
 func _spawn_boss() -> void:
@@ -285,6 +303,11 @@ func _on_boss_defeated() -> void:
 	if reward_cartridge != "":
 		_player.equip_cartridge(reward_cartridge)
 		GameState.collect_cartridge(reward_cartridge)
+	_spawn_dialog(
+		"GAMO.SYS",
+		"Era purificada. Coleção restaurada. Cartucho recuperado.",
+		Color("#9bbc0f")
+	)
 	await get_tree().create_timer(2.0, true, false, true).timeout
 	_end_run(true)
 

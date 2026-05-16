@@ -60,24 +60,27 @@ func _build() -> void:
 	# Painel de stats — grid 2 colunas com métricas da run
 	_build_stats_panel(victory)
 
-	# CTA Gamo na esquerda
-	_build_gamo_cta()
-
-	var vbox := VBoxContainer.new()
-	vbox.anchor_left = 0.5
-	vbox.anchor_right = 0.5
-	vbox.position = Vector2(-80, 304)
-	vbox.size = Vector2(160, 60)
-	vbox.add_theme_constant_override("separation", 6)
-	add_child(vbox)
+	# Botões em linha horizontal (REJOGAR + MENU) acima do CTA.
+	# Posição ajustada pra dar folga pro CTA no rodapé sem sobreposição.
+	var hbox := HBoxContainer.new()
+	hbox.anchor_left = 0.5
+	hbox.anchor_right = 0.5
+	hbox.position = Vector2(-150, 280)
+	hbox.size = Vector2(300, 28)
+	hbox.add_theme_constant_override("separation", 12)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	add_child(hbox)
 
 	var retry := _make_button(I18n.t("go_retry"), victory)
 	retry.pressed.connect(_on_retry)
-	vbox.add_child(retry)
+	hbox.add_child(retry)
 
 	var menu := _make_button(I18n.t("go_menu"), victory)
 	menu.pressed.connect(_on_menu)
-	vbox.add_child(menu)
+	hbox.add_child(menu)
+
+	# CTA Gamo no rodapé — barra horizontal abaixo dos botões.
+	_build_gamo_cta()
 
 	add_child(MenuCursor.new())
 	retry.grab_focus()
@@ -88,8 +91,8 @@ func _build_stats_panel(victory: bool) -> void:
 	var panel := Panel.new()
 	panel.anchor_left = 0.5
 	panel.anchor_right = 0.5
-	panel.position = Vector2(-160, 140)
-	panel.size = Vector2(320, 150)
+	panel.position = Vector2(-160, 138)
+	panel.size = Vector2(320, 134)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.04, 0.05, 0.08, 0.9)
 	sb.border_color = Color("#9bbc0f") if victory else Color("#ff5252")
@@ -101,10 +104,10 @@ func _build_stats_panel(victory: bool) -> void:
 	var stats := _collect_stats()
 	var grid := GridContainer.new()
 	grid.columns = 2
-	grid.position = Vector2(14, 10)
-	grid.size = Vector2(292, 130)
+	grid.position = Vector2(14, 8)
+	grid.size = Vector2(292, 118)
 	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 2)
+	grid.add_theme_constant_override("v_separation", 1)
 	panel.add_child(grid)
 	for pair in stats:
 		grid.add_child(_make_stat_label(pair[0], false))
@@ -139,58 +142,74 @@ func _make_stat_label(text: String, is_value: bool) -> Label:
 	return lbl
 
 
-## CTA "Conheça gamo.games" — quadrado pixelado simulando QR + texto à direita.
+## CTA "Conheça gamo.games" — barra horizontal no rodapé inferior.
+## mouse_filter = IGNORE em tudo pra NUNCA roubar cliques dos botões acima.
 func _build_gamo_cta() -> void:
 	var panel := Panel.new()
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
-	panel.position = Vector2(-256, 290)
-	panel.size = Vector2(244, 64)
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_top = 1.0
+	panel.anchor_bottom = 1.0
+	# 4px de margem inferior + sobe alguns px pra não encostar nos botões.
+	panel.position = Vector2(-240, -50)
+	panel.size = Vector2(480, 44)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE  # passa cliques adiante
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.04, 0.05, 0.08, 0.95)
 	sb.border_color = Color("#ffeb3b")
 	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(4)
+	sb.set_corner_radius_all(0)
 	panel.add_theme_stylebox_override("panel", sb)
 	add_child(panel)
 
-	# "QR" decorativo: textura procedural padrão de quadrados aleatórios estáveis.
+	# "QR" decorativo à esquerda, 32x32 — quadrado e bem visível.
 	var qr_tex := _make_fake_qr_texture()
 	var qr := TextureRect.new()
 	qr.texture = qr_tex
-	qr.position = Vector2(8, 8)
-	qr.size = Vector2(48, 48)
+	qr.position = Vector2(6, 6)
+	qr.size = Vector2(32, 32)
 	qr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	qr.stretch_mode = TextureRect.STRETCH_SCALE
 	qr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	qr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(qr)
 
+	# Linha 1: chamada amarela
 	var caption := Label.new()
-	caption.text = "CURTE COLECIONAR GAMES?"
-	caption.add_theme_font_size_override("font_size", 10)
+	caption.text = "CURTE COLECIONAR GAMES DE VERDADE?"
+	caption.add_theme_font_size_override("font_size", 11)
 	caption.add_theme_color_override("font_color", Color("#ffeb3b"))
 	caption.add_theme_color_override("font_outline_color", Color.BLACK)
 	caption.add_theme_constant_override("outline_size", 2)
-	caption.position = Vector2(64, 6)
-	caption.size = Vector2(176, 14)
+	caption.position = Vector2(46, 4)
+	caption.size = Vector2(430, 14)
+	caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(caption)
 
+	# Linha 2: gamo.games em ciano grande + chamada à direita
 	var url := Label.new()
 	url.text = "gamo.games"
 	url.add_theme_font_size_override("font_size", 18)
 	url.add_theme_color_override("font_color", Color("#00e5ff"))
 	url.add_theme_color_override("font_outline_color", Color.BLACK)
 	url.add_theme_constant_override("outline_size", 3)
-	url.position = Vector2(64, 20)
-	url.size = Vector2(176, 22)
+	url.position = Vector2(46, 18)
+	url.size = Vector2(180, 22)
+	url.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	url.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(url)
 
 	var hint := Label.new()
-	hint.text = "Conheça a plataforma."
-	hint.add_theme_font_size_override("font_size", 9)
-	hint.add_theme_color_override("font_color", Color(0.75, 0.75, 0.85))
-	hint.position = Vector2(64, 44)
-	hint.size = Vector2(176, 12)
+	hint.text = "→ Conheça a plataforma"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95))
+	hint.add_theme_color_override("font_outline_color", Color.BLACK)
+	hint.add_theme_constant_override("outline_size", 2)
+	hint.position = Vector2(232, 20)
+	hint.size = Vector2(240, 18)
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(hint)
 
 
@@ -236,7 +255,8 @@ func _reward_name_for_era() -> String:
 func _make_button(text: String, victory: bool) -> Button:
 	var btn := Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(160, 24)
+	# Largura reduzida pra 2 botões caberem horizontalmente.
+	btn.custom_minimum_size = Vector2(140, 28)
 	btn.add_theme_font_size_override("font_size", 16)
 
 	var accent: Color = Color("#306230") if victory else Color("#7a0030")

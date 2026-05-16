@@ -165,15 +165,17 @@ func _make_spirit_card(spirit_id: String, card_size: Vector2) -> Button:
 	btn.add_theme_stylebox_override("focus", sb_active)
 	btn.add_theme_stylebox_override("pressed", sb_active)
 
-	# Layout vertical (nome no topo, sprite no meio, descrição no fundo) que cabe em qualquer tamanho.
-	var pad: int = 10
+	# Layout: nome (22) + sprite_preview (96) + skin_label (14) + skins_row (52) + stats (32)
+	var pad: int = 8
 	var name_h: int = 22
-	var desc_h: int = 56
-	var sprite_band_h: int = int(card_size.y) - pad * 2 - name_h - desc_h - 8
+	var sprite_h: int = 96
+	var skin_lbl_h: int = 14
+	var skins_h: int = 52
 
+	# Nome do personagem
 	var name_label := Label.new()
 	name_label.text = def.display_name if unlocked else I18n.t("hub_unknown")
-	name_label.add_theme_font_size_override("font_size", 16)
+	name_label.add_theme_font_size_override("font_size", 18)
 	name_label.add_theme_color_override(
 		"font_color", Color("#9bbc0f") if unlocked else Color(0.5, 0.5, 0.5)
 	)
@@ -185,44 +187,170 @@ func _make_spirit_card(spirit_id: String, card_size: Vector2) -> Button:
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	btn.add_child(name_label)
 
+	# Sprite preview com paleta da skin ativa
+	var preview_palette: Dictionary = SkinRegistry.active_palette()
 	var sprite := Sprite2D.new()
 	sprite.texture = PixelArt.make_sprite(
 		PackedStringArray(def.sprite_frames[0]),
-		def.palette if unlocked else _grayscale(def.palette)
+		preview_palette if unlocked else _grayscale(preview_palette)
 	)
 	sprite.centered = true
-	var scale_factor: float = clamp(min(card_size.x, sprite_band_h) / 32.0, 1.6, 3.5)
-	sprite.scale = Vector2(scale_factor, scale_factor)
-	sprite.position = Vector2(card_size.x / 2.0, pad + name_h + sprite_band_h / 2.0)
+	sprite.scale = Vector2(3.0, 3.0)
+	sprite.position = Vector2(card_size.x / 2.0, pad + name_h + sprite_h / 2.0)
+	sprite.name = "PreviewSprite"
 	btn.add_child(sprite)
 
-	var bottom_y: int = int(card_size.y) - pad - desc_h
-	if unlocked:
-		var desc := Label.new()
-		desc.text = def.description
-		desc.add_theme_font_size_override("font_size", 11)
-		desc.add_theme_color_override("font_color", Color.WHITE)
-		desc.position = Vector2(pad, bottom_y)
-		desc.size = Vector2(card_size.x - pad * 2, desc_h)
-		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		desc.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-		desc.clip_text = true
-		btn.add_child(desc)
-		btn.pressed.connect(_on_spirit_selected.bind(spirit_id))
-	else:
-		var lock := Label.new()
-		lock.text = I18n.t("hub_locked") + "\n" + def.unlock_label
-		lock.add_theme_font_size_override("font_size", 10)
-		lock.add_theme_color_override("font_color", Color(0.55, 0.4, 0.4))
-		lock.position = Vector2(pad, bottom_y)
-		lock.size = Vector2(card_size.x - pad * 2, desc_h)
-		lock.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lock.clip_text = true
-		btn.add_child(lock)
+	if not unlocked:
+		return btn
 
+	# Header "SKIN" + linha de thumbnails
+	var skin_lbl_y: int = pad + name_h + sprite_h
+	var skin_label := Label.new()
+	skin_label.text = "SKIN"
+	skin_label.add_theme_font_size_override("font_size", 10)
+	skin_label.add_theme_color_override("font_color", Color("#00e5ff"))
+	skin_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	skin_label.add_theme_constant_override("outline_size", 2)
+	skin_label.position = Vector2(pad, skin_lbl_y)
+	skin_label.size = Vector2(card_size.x - pad * 2, skin_lbl_h)
+	skin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	btn.add_child(skin_label)
+
+	# Linha de thumbnails de skin
+	var skins := SkinRegistry.all_ids()
+	var skin_count := skins.size()
+	var thumb_w: int = 36
+	var thumb_gap: int = 6
+	var total_w: int = skin_count * thumb_w + (skin_count - 1) * thumb_gap
+	var skins_y: int = skin_lbl_y + skin_lbl_h
+	var start_x: int = int((card_size.x - total_w) / 2)
+	for i in skin_count:
+		var skin_id: String = skins[i]
+		var thumb := _make_skin_thumb(skin_id, sprite, name_label)
+		thumb.position = Vector2(start_x + i * (thumb_w + thumb_gap), skins_y)
+		thumb.size = Vector2(thumb_w, skins_h - 6)
+		btn.add_child(thumb)
+
+	# Rodapé pequeno com descrição da skin atual
+	var stats_y: int = skins_y + skins_h
+	var info := Label.new()
+	info.name = "SkinInfo"
+	info.add_theme_font_size_override("font_size", 9)
+	info.add_theme_color_override("font_color", Color(0.75, 0.78, 0.85))
+	info.add_theme_color_override("font_outline_color", Color.BLACK)
+	info.add_theme_constant_override("outline_size", 2)
+	info.position = Vector2(pad, stats_y)
+	info.size = Vector2(card_size.x - pad * 2, card_size.y - stats_y - 2)
+	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.clip_text = true
+	btn.add_child(info)
+	_refresh_skin_info(info)
+
+	btn.pressed.connect(_on_spirit_selected.bind(spirit_id))
 	return btn
+
+
+## Constrói um botão-thumbnail de skin com mini-sprite + nome.
+func _make_skin_thumb(skin_id: String, preview_sprite: Sprite2D, name_label: Label) -> Button:
+	var def: SkinRegistry.SkinDef = SkinRegistry.get_def(skin_id)
+	var unlocked: bool = SkinRegistry.is_unlocked(skin_id)
+	var active: bool = GameState.current_skin_id == skin_id
+	var thumb := Button.new()
+	thumb.focus_mode = Control.FOCUS_ALL
+	thumb.disabled = not unlocked
+	thumb.toggle_mode = false
+
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.07, 0.12, 1.0)
+	if active:
+		sb.border_color = Color("#ffeb3b")
+		sb.set_border_width_all(2)
+	elif unlocked:
+		sb.border_color = Color(0.35, 0.4, 0.5)
+		sb.set_border_width_all(1)
+	else:
+		sb.border_color = Color(0.2, 0.2, 0.22)
+		sb.set_border_width_all(1)
+	sb.set_corner_radius_all(2)
+	thumb.add_theme_stylebox_override("normal", sb)
+	var sb_focus := sb.duplicate() as StyleBoxFlat
+	sb_focus.border_color = Color("#00e5ff")
+	sb_focus.set_border_width_all(2)
+	thumb.add_theme_stylebox_override("hover", sb_focus)
+	thumb.add_theme_stylebox_override("focus", sb_focus)
+
+	# Mini-sprite (preview da skin) ou cadeado se bloqueada
+	var mini := Sprite2D.new()
+	if unlocked:
+		mini.texture = PixelArt.make_sprite(
+			PackedStringArray(Sprites.GAMO_T1_IDLE[0]),
+			def.palette
+		)
+		mini.scale = Vector2(1.0, 1.0)
+	else:
+		mini.texture = PixelArt.make_sprite(
+			PackedStringArray(Sprites.GAMO_T1_IDLE[0]),
+			_grayscale(def.palette)
+		)
+		mini.scale = Vector2(1.0, 1.0)
+		mini.modulate = Color(0.5, 0.5, 0.55)
+	mini.centered = true
+	mini.position = Vector2(18, 22)
+	thumb.add_child(mini)
+
+	if unlocked:
+		thumb.pressed.connect(_on_skin_picked.bind(skin_id, preview_sprite, name_label, thumb))
+	else:
+		# Tooltip mostra unlock hint quando bloqueada.
+		thumb.tooltip_text = def.unlock_hint
+	return thumb
+
+
+func _on_skin_picked(skin_id: String, preview_sprite: Sprite2D, _name_label: Label, _thumb: Button) -> void:
+	if not SkinRegistry.is_unlocked(skin_id):
+		Audio.play(Audio.Sfx.UI_ERROR)
+		return
+	GameState.current_skin_id = skin_id
+	GameState.save_progress()
+	Audio.play(Audio.Sfx.UI_SELECT)
+	# Atualiza preview com nova paleta
+	preview_sprite.texture = PixelArt.make_sprite(
+		PackedStringArray(SpiritRegistry.get_def("pixel").sprite_frames[0]),
+		SkinRegistry.active_palette()
+	)
+	# Refaz o card pra atualizar borda do thumb ativo + info.
+	_rebuild_spirit_card()
+
+
+func _rebuild_spirit_card() -> void:
+	# Limpa o GridContainer atual e reconstrói.
+	for child in get_children():
+		if child is GridContainer:
+			for c in child.get_children():
+				c.queue_free()
+			# Aguarda 1 frame pra free completar antes de reconstruir.
+			call_deferred("_build_spirits_panel_inplace", child)
+			return
+
+
+func _build_spirits_panel_inplace(grid: GridContainer) -> void:
+	var ids := SpiritRegistry.all_ids()
+	var card_w: int = int((SPIRITS_PANEL_SIZE.x - (grid.columns - 1) * 8) / grid.columns)
+	var card_h: int = int(SPIRITS_PANEL_SIZE.y) if ids.size() <= grid.columns else int((SPIRITS_PANEL_SIZE.y - 8) / 2)
+	var card_size := Vector2(card_w, card_h)
+	for id in ids:
+		var card := _make_spirit_card(id, card_size)
+		grid.add_child(card)
+		_spirit_card_buttons[id] = card
+
+
+func _refresh_skin_info(info: Label) -> void:
+	var def: SkinRegistry.SkinDef = SkinRegistry.get_def(GameState.current_skin_id)
+	if def == null:
+		info.text = ""
+		return
+	info.text = "[%s] %s" % [def.display_name.to_upper(), def.description]
 
 
 func _grayscale(palette: Dictionary) -> Dictionary:
@@ -338,17 +466,17 @@ func _build_buttons() -> void:
 	# quando inimigos morressem na arena e tokens_changed disparasse.
 	EventBus.tokens_changed.connect(_on_tokens_changed)
 
-	# 4 botões na barra inferior. Cada um 120 px de largura, separação 8 px.
-	# Total: 4*120 + 3*8 = 504, cabe no viewport de 640.
-	var btn_w := 120
-	var sep := 8
+	# 5 botões na barra inferior. Cada um 100 px de largura, separação 6 px.
+	# Total: 5*100 + 4*6 = 524, cabe no viewport de 640.
+	var btn_w := 100
+	var sep := 6
 	var hbox := HBoxContainer.new()
 	hbox.anchor_top = 1.0
 	hbox.anchor_bottom = 1.0
 	hbox.anchor_left = 0.5
 	hbox.anchor_right = 0.5
-	hbox.position = Vector2(-256, -36)
-	hbox.size = Vector2(512, 28)
+	hbox.position = Vector2(-262, -36)
+	hbox.size = Vector2(524, 28)
 	hbox.add_theme_constant_override("separation", sep)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(hbox)
@@ -361,6 +489,10 @@ func _build_buttons() -> void:
 	upgrades.pressed.connect(_on_open_upgrades)
 	hbox.add_child(upgrades)
 
+	var archive := _make_button("ARQUIVO", false, btn_w)
+	archive.pressed.connect(_on_open_codex)
+	hbox.add_child(archive)
+
 	var achievements := _make_button("CONQUISTAS", false, btn_w)
 	achievements.pressed.connect(_on_open_achievements)
 	hbox.add_child(achievements)
@@ -369,7 +501,7 @@ func _build_buttons() -> void:
 	back.pressed.connect(_on_back)
 	hbox.add_child(back)
 
-	# Instancia o modal de upgrades + painel de conquistas (escondidos até clicar).
+	# Instancia o modal de upgrades + painel de conquistas + codex (escondidos até clicar).
 	var modal := UpgradesModal.new()
 	modal.name = "UpgradesModal"
 	add_child(modal)
@@ -378,10 +510,20 @@ func _build_buttons() -> void:
 	ach_panel.name = "AchievementsPanel"
 	add_child(ach_panel)
 
+	var codex := CodexPanel.new()
+	codex.name = "CodexPanel"
+	add_child(codex)
+
 	# Seta animada acompanhando o foco do menu.
 	add_child(MenuCursor.new())
 
 	play.grab_focus()
+
+
+func _on_open_codex() -> void:
+	var panel := get_node_or_null("CodexPanel") as CodexPanel
+	if panel != null:
+		panel.open()
 
 
 func _on_tokens_changed(total: int) -> void:

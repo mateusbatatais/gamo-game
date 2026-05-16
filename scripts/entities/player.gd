@@ -88,6 +88,10 @@ func _build_collision_shape() -> void:
 
 
 func _build_sprite() -> void:
+	# Aplica skin escolhida na hub — fallback pra paleta default se a skin
+	# não estiver no registry por algum motivo.
+	var skin_palette: Dictionary = SkinRegistry.active_palette()
+	spirit_palette = skin_palette
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = Sprites.make_animation(
 		spirit_frames, spirit_palette, 3.0
@@ -231,7 +235,8 @@ func _on_level_up_visual(new_level: int) -> void:
 			frames = Sprites.GAMO_T3_IDLE
 		_:
 			frames = Sprites.GAMO_T1_IDLE
-	sprite.sprite_frames = Sprites.make_animation(frames, spirit_palette, 3.0)
+	# Mantém a paleta da skin ativa em todos os tiers de evolução.
+	sprite.sprite_frames = Sprites.make_animation(frames, SkinRegistry.active_palette(), 3.0)
 	sprite.play("default")
 
 

@@ -14,6 +14,10 @@ var bosses_defeated: Array[String] = []  ## ids de bosses derrotados
 var memory_tokens: int = 0  ## moeda persistente, gasta na hub
 var upgrade_levels: Dictionary = {}  ## id (String) -> level (int)
 var achievements_unlocked: Array[String] = []
+var intro_seen: bool = false
+var current_skin_id: String = "default"
+var unlocked_skins: Array[String] = ["default"]
+var encountered_enemies: Array[String] = []  ## ids dos inimigos já vistos (codex)
 # Stats de run (capturados pra game-over)
 var last_run_damage_dealt: int = 0
 var last_run_max_combo: int = 0
@@ -181,6 +185,10 @@ func save_progress() -> void:
 	cfg.set_value("progress", "achievements_unlocked", achievements_unlocked)
 	cfg.set_value("progress", "max_combo_ever", max_combo_ever)
 	cfg.set_value("progress", "total_tokens_earned", total_tokens_earned)
+	cfg.set_value("progress", "intro_seen", intro_seen)
+	cfg.set_value("progress", "current_skin_id", current_skin_id)
+	cfg.set_value("progress", "unlocked_skins", unlocked_skins)
+	cfg.set_value("progress", "encountered_enemies", encountered_enemies)
 	var err := cfg.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Falha ao salvar progresso: %s" % err)
@@ -209,7 +217,8 @@ func load_progress() -> void:
 		if b is String:
 			bosses_defeated.append(b)
 	memory_tokens = cfg.get_value("progress", "memory_tokens", 0)
-	var raw_upgrades = cfg.get_value("progress", "upgrade_levels", {})
+	# Tipo explícito Variant pra não disparar o warning "inferred from Variant".
+	var raw_upgrades: Variant = cfg.get_value("progress", "upgrade_levels", {})
 	upgrade_levels = raw_upgrades if raw_upgrades is Dictionary else {}
 	var raw_ach: Array = cfg.get_value("progress", "achievements_unlocked", [])
 	achievements_unlocked.clear()
@@ -218,6 +227,39 @@ func load_progress() -> void:
 			achievements_unlocked.append(a)
 	max_combo_ever = cfg.get_value("progress", "max_combo_ever", 0)
 	total_tokens_earned = cfg.get_value("progress", "total_tokens_earned", 0)
+	intro_seen = cfg.get_value("progress", "intro_seen", false)
+	current_skin_id = cfg.get_value("progress", "current_skin_id", "default")
+	var raw_skins: Array = cfg.get_value("progress", "unlocked_skins", ["default"])
+	unlocked_skins.clear()
+	for s in raw_skins:
+		if s is String:
+			unlocked_skins.append(s)
+	if not "default" in unlocked_skins:
+		unlocked_skins.append("default")
+	var raw_enc: Array = cfg.get_value("progress", "encountered_enemies", [])
+	encountered_enemies.clear()
+	for e in raw_enc:
+		if e is String:
+			encountered_enemies.append(e)
+
+
+func mark_intro_seen() -> void:
+	intro_seen = true
+	save_progress()
+
+
+func register_encounter(enemy_id: String) -> void:
+	if enemy_id == "" or enemy_id in encountered_enemies:
+		return
+	encountered_enemies.append(enemy_id)
+	save_progress()
+
+
+func unlock_skin(skin_id: String) -> void:
+	if skin_id in unlocked_skins:
+		return
+	unlocked_skins.append(skin_id)
+	save_progress()
 
 
 func register_boss_defeat(boss_id: String) -> void:

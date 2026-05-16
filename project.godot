@@ -17,7 +17,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 config/name="Cartridge Crusade"
 config/description="Bullet heaven roguelite — promo game for Gamo platform"
 config/version="0.1.0"
-run/main_scene="res://scenes/main_menu.tscn"
+run/main_scene="res://scenes/splash.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
 [autoload]
@@ -42,6 +42,8 @@ HitStop="*res://scripts/autoload/hit_stop.gd"
 CrtOverlay="*res://scripts/autoload/crt_overlay.gd"
 UpgradeRegistry="*res://scripts/autoload/upgrade_registry.gd"
 AchievementRegistry="*res://scripts/autoload/achievement_registry.gd"
+SkinRegistry="*res://scripts/autoload/skin_registry.gd"
+CodexRegistry="*res://scripts/autoload/codex_registry.gd"
 
 [display]
 

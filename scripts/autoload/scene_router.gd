@@ -7,10 +7,20 @@ const HUB := "res://scenes/hub.tscn"
 const ARENA := "res://scenes/arena.tscn"
 const GAME_OVER := "res://scenes/game_over.tscn"
 const OPTIONS := "res://scenes/options.tscn"
+const SPLASH := "res://scenes/splash.tscn"
+const INTRO := "res://scenes/intro.tscn"
 
 
 func go_to_main_menu() -> void:
 	SceneTransition.go_to(MAIN_MENU)
+
+
+func go_to_intro() -> void:
+	SceneTransition.go_to(INTRO)
+
+
+func go_to_splash() -> void:
+	SceneTransition.go_to(SPLASH)
 
 
 func go_to_hub() -> void:

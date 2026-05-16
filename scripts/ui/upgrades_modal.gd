@@ -72,11 +72,17 @@ func _build() -> void:
 	_tokens_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_panel.add_child(_tokens_label)
 
+	# ScrollContainer pra acomodar todos os upgrades mesmo que ultrapassem a altura visível.
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(12, 56)
+	scroll.size = Vector2(PANEL_WIDTH - 24, PANEL_HEIGHT - 100)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_panel.add_child(scroll)
+
 	_list = VBoxContainer.new()
-	_list.position = Vector2(12, 56)
-	_list.size = Vector2(PANEL_WIDTH - 24, PANEL_HEIGHT - 100)
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_theme_constant_override("separation", 4)
-	_panel.add_child(_list)
+	scroll.add_child(_list)
 
 	for id in UpgradeRegistry.all_ids():
 		var row := _make_row(id)

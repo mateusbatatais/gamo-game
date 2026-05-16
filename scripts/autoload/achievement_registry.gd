@@ -32,56 +32,58 @@ func _ready() -> void:
 
 
 func _register_all() -> void:
+	# Nomes em vocabulário Gamo (catalogação, raridade, condição) — reforçam o
+	# vínculo com a plataforma de colecionismo sem parecer patrocínio.
 	_add(AchievementDef.new(
-		"first_kill", "Primeiro Sangue", "Mate seu primeiro inimigo.",
+		"first_kill", "Primeira Catalogação", "Registre seu primeiro abate.",
 		func(): return GameState.total_kills >= 1
 	))
 	_add(AchievementDef.new(
-		"kills_100", "Centena", "Acumule 100 abates totais.",
+		"kills_100", "Caçador de Bugs", "Acumule 100 abates no banco de dados.",
 		func(): return GameState.total_kills >= 100
 	))
 	_add(AchievementDef.new(
-		"kills_1000", "Limpeza Profunda", "Acumule 1.000 abates totais.",
+		"kills_1000", "Catalogador Iniciante", "Acumule 1.000 abates no arquivo.",
 		func(): return GameState.total_kills >= 1000
 	))
 	_add(AchievementDef.new(
-		"kills_5000", "Apagador de Bug", "Acumule 5.000 abates totais.",
+		"kills_5000", "Catalogador Veterano", "Acumule 5.000 abates registrados.",
 		func(): return GameState.total_kills >= 5000
 	))
 	_add(AchievementDef.new(
-		"combo_25", "Sequência", "Faça um combo de 25 hits.",
+		"combo_25", "Sequência Lacrada", "Faça um combo de 25 hits sem erro.",
 		func(): return GameState.max_combo_ever >= 25
 	))
 	_add(AchievementDef.new(
-		"combo_50", "Imparável", "Faça um combo de 50 hits.",
+		"combo_50", "Box Completo", "Faça um combo de 50 hits — coleção impecável.",
 		func(): return GameState.max_combo_ever >= 50
 	))
 	_add(AchievementDef.new(
-		"combo_100", "Maestro Glitch", "Faça um combo de 100 hits.",
+		"combo_100", "Mint Condition", "Faça um combo de 100 hits — estado perfeito.",
 		func(): return GameState.max_combo_ever >= 100
 	))
 	_add(AchievementDef.new(
-		"collect_5", "Colecionador Iniciante", "Colete 5 cartuchos diferentes.",
+		"collect_5", "Coleção Modesta", "Adquira 5 cartuchos diferentes.",
 		func(): return GameState.collected_cartridges.size() >= 5
 	))
 	_add(AchievementDef.new(
-		"collect_10", "Estante Cheia", "Colete 10 cartuchos diferentes.",
+		"collect_10", "Estante Cheia", "Adquira 10 cartuchos diferentes — prateleira lotada.",
 		func(): return GameState.collected_cartridges.size() >= 10
 	))
 	_add(AchievementDef.new(
-		"boss_kill", "Purgador", "Derrote o boss Fragmentation.",
+		"boss_kill", "Cartucho Restaurado", "Derrote o boss Fragmentation e recupere a era.",
 		func(): return GameState.bosses_defeated.size() >= 1
 	))
 	_add(AchievementDef.new(
-		"survive_5min", "Resistente", "Sobreviva 5 minutos em uma run.",
+		"survive_5min", "Anti-Glitch", "Sobreviva 5 minutos contra a corrupção.",
 		func(): return GameState.best_run_time >= 300.0
 	))
 	_add(AchievementDef.new(
-		"survive_full", "Maratonista", "Sobreviva os 6 minutos completos.",
+		"survive_full", "Defensor da Coleção Eterna", "Sobreviva os 6 minutos completos.",
 		func(): return GameState.best_run_time >= 360.0
 	))
 	_add(AchievementDef.new(
-		"tokens_500", "Memória Cheia", "Acumule 500 Tokens de Memória no total.",
+		"tokens_500", "Mestre do Arquivo", "Acumule 500 Tokens de Memória no total.",
 		func(): return GameState.total_tokens_earned >= 500
 	))
 
