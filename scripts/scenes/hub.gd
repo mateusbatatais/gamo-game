@@ -180,12 +180,13 @@ func _make_spirit_card(spirit_id: String, card_size: Vector2) -> Button:
 	btn.add_theme_stylebox_override("focus", sb_active)
 	btn.add_theme_stylebox_override("pressed", sb_active)
 
-	# Layout: nome (22) + sprite_preview (96) + skin_label (14) + skins_row (52) + stats (32)
+	# Layout: nome (22) + sprite_preview (72) + skin_label (14) + skins_grid (76) + stats (32)
+	# Sprite preview encolheu de 96 → 72 pra ganhar espaço pras 2 linhas de skins.
 	var pad: int = 8
 	var name_h: int = 22
-	var sprite_h: int = 96
+	var sprite_h: int = 72
 	var skin_lbl_h: int = 14
-	var skins_h: int = 52
+	var skins_h: int = 76
 
 	# Nome do personagem
 	var name_label := Label.new()
@@ -236,20 +237,28 @@ func _make_spirit_card(spirit_id: String, card_size: Vector2) -> Button:
 	skin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	btn.add_child(skin_label)
 
-	# Linha de thumbnails de skin
+	# Grid de thumbnails de skin (5 colunas → 2 linhas pra ~9 skins).
+	# Centralizado horizontalmente, 5 × 30 + 4 × 4 = 166 wide.
 	var skins := SkinRegistry.all_ids()
-	var skin_count := skins.size()
 	var thumb_w: int = 30
-	var thumb_gap: int = 4
-	var total_w: int = skin_count * thumb_w + (skin_count - 1) * thumb_gap
+	var thumb_h: int = 36
+	var thumb_gap_h: int = 4
+	var thumb_gap_v: int = 4
+	var cols: int = 5
 	var skins_y: int = skin_lbl_y + skin_lbl_h
-	var start_x: int = int((card_size.x - total_w) / 2)
-	for i in skin_count:
+	var grid := GridContainer.new()
+	grid.columns = cols
+	grid.add_theme_constant_override("h_separation", thumb_gap_h)
+	grid.add_theme_constant_override("v_separation", thumb_gap_v)
+	var grid_w: int = cols * thumb_w + (cols - 1) * thumb_gap_h
+	grid.position = Vector2(int((card_size.x - grid_w) / 2), skins_y)
+	grid.size = Vector2(grid_w, skins_h)
+	btn.add_child(grid)
+	for i in skins.size():
 		var skin_id: String = skins[i]
 		var thumb := _make_skin_thumb(skin_id, sprite, name_label)
-		thumb.position = Vector2(start_x + i * (thumb_w + thumb_gap), skins_y)
-		thumb.size = Vector2(thumb_w, skins_h - 6)
-		btn.add_child(thumb)
+		thumb.custom_minimum_size = Vector2(thumb_w, thumb_h)
+		grid.add_child(thumb)
 
 	# Rodapé pequeno com descrição da skin atual
 	var stats_y: int = skins_y + skins_h

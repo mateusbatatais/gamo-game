@@ -48,78 +48,58 @@ func _ready() -> void:
 
 
 func _register_all() -> void:
-	# Default — azul/branco/amarelo Gamo
+	# Default — GAMO robô oficial, azul/branco/amarelo
 	_add(SkinDef.new(
-		"default", "Padrão",
-		"Mascote oficial Gamo. Azul, branco e amarelo.",
+		"default", "GAMO",
+		"Mascote oficial. Robô guardião da Coleção Eterna.",
 		Sprites.PALETTE_GAMO,
 		func(): return true,
 		""
 	))
-	# Veterano — verde/cinza retro
+	# Cavaleiro — armadura prata com plumagem vermelha, derrota o 1º boss
 	_add(SkinDef.new(
-		"veteran", "Veterano",
-		"Tons retrô Game Boy. Para quem já mediu forças com o Glitch.",
-		{
-			"#": Color("#306230"), "=": Color("#0f380f"),
-			"L": Color("#9bbc0f"), "o": Color("#9bbc0f"),
-			"O": Color("#ffffff"), "x": Color("#ff9800"),
-			"-": Color("#000000"),
-		},
+		"knight", "Cavaleiro",
+		"Elmo com plumagem + armadura prata + cruz dourada. Veterano do Fragmentation.",
+		Sprites.PALETTE_KNIGHT,
 		func(): return GameState.bosses_defeated.size() >= 1,
-		"Derrote o boss Fragmentation."
+		"Derrote o boss Fragmentation.",
+		Sprites.KNIGHT_IDLE
 	))
-	# Lacrado — dourado/preto edição limitada
+	# Punk — moicano rosa + jaqueta de couro, combo 50
 	_add(SkinDef.new(
-		"lacrado", "Lacrado",
-		"Edição limitada. Banhada em ouro 24k digital.",
-		{
-			"#": Color("#bf8f30"), "=": Color("#5a3f10"),
-			"L": Color("#ffd54f"), "o": Color("#ffeb3b"),
-			"O": Color("#ffffff"), "x": Color("#ff5252"),
-			"-": Color("#0a0a14"),
-		},
+		"punk", "Punk",
+		"Moicano rosa + jaqueta com tachas. Combo é arte.",
+		Sprites.PALETTE_PUNK,
 		func(): return GameState.max_combo_ever >= 50,
-		"Faça um combo de 50 hits (Box Completo)."
+		"Faça um combo de 50 hits (Box Completo).",
+		Sprites.PUNK_IDLE
 	))
-	# Mint Condition — branco/ciano gélido
+	# Ninja — máscara preta com faixa vermelha, combo 100
 	_add(SkinDef.new(
-		"mint", "Mint Condition",
-		"Estado perfeito. Selo intacto, sem amassados.",
-		{
-			"#": Color("#e3f2fd"), "=": Color("#90caf9"),
-			"L": Color("#00bcd4"), "o": Color("#00e5ff"),
-			"O": Color("#ffffff"), "x": Color("#ff9800"),
-			"-": Color("#0d47a1"),
-		},
+		"ninja", "Ninja",
+		"Máscara hyojo + gi escuro. Silencioso e letal.",
+		Sprites.PALETTE_NINJA,
 		func(): return GameState.max_combo_ever >= 100,
-		"Faça um combo de 100 hits (Mint Condition)."
+		"Faça um combo de 100 hits (Mint Condition).",
+		Sprites.NINJA_IDLE
 	))
-	# Glitch — magenta/cyan corrompido
+	# Ciborgue — meio robô meio humano, 1000 kills
 	_add(SkinDef.new(
-		"glitch", "Corrupção",
-		"GAMO foi tocado pelo Glitch. Cores invertidas e instáveis.",
-		{
-			"#": Color("#e040fb"), "=": Color("#000000"),
-			"L": Color("#00e5ff"), "o": Color("#ff00ff"),
-			"O": Color("#ffffff"), "x": Color("#ffeb3b"),
-			"-": Color("#1a0033"),
-		},
+		"cyborg", "Ciborgue",
+		"Metade humano, metade circuito. Atualizado contra o Glitch.",
+		Sprites.PALETTE_CYBORG,
 		func(): return GameState.total_kills >= 1000,
-		"Acumule 1.000 abates totais (Catalogador Iniciante)."
+		"Acumule 1.000 abates totais.",
+		Sprites.CYBORG_IDLE
 	))
-	# Konami — vermelho/branco/azul tipo controle clássico (easter egg)
+	# Pixel Ghost — fantasma estilo arcade, easter egg Konami
 	_add(SkinDef.new(
-		"konami", "Cheat Code",
-		"30 vidas no estilo dos clássicos. Você sabe o código.",
-		{
-			"#": Color("#d32f2f"), "=": Color("#7f0000"),
-			"L": Color("#ffffff"), "o": Color("#ff5252"),
-			"O": Color("#ffeb3b"), "x": Color("#0d47a1"),
-			"-": Color("#000000"),
-		},
+		"ghost", "Pixel Ghost",
+		"Espírito errante de um cartucho perdido. Você sabe o código.",
+		Sprites.PALETTE_GHOST,
 		func(): return GameState.konami_unlocked,
-		"Acorde o código que dorme nos clássicos."
+		"Acorde o código que dorme nos clássicos.",
+		Sprites.GHOST_IDLE
 	))
 	# --- Personagens alternativos (sprite + paleta próprios) ---
 	_add(SkinDef.new(

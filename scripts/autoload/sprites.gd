@@ -52,6 +52,66 @@ const PALETTE_WIZARD := {
 	"F": Color("#ffe0b2"),  # face/pele
 }
 
+# CAVALEIRO — elmo com plumagem vermelha, armadura prata com cruz dourada
+const PALETTE_KNIGHT := {
+	"#": Color("#90a4ae"),  # armadura cinza-aço
+	"=": Color("#455a64"),  # sombra da armadura
+	"L": Color("#eceff1"),  # polimento prata
+	"o": Color("#d32f2f"),  # plumagem vermelha
+	"O": Color("#ffffff"),  # olhos brilhantes
+	"x": Color("#ffd54f"),  # cruz/escudo dourado
+	"-": Color("#0a0a0a"),  # visor escuro
+	"F": Color("#ffe0b2"),  # pele
+}
+
+# PUNK — moicano rosa, jaqueta de couro com tachas, makeup
+const PALETTE_PUNK := {
+	"#": Color("#1a1a1a"),  # jaqueta couro
+	"=": Color("#000000"),  # sombra jaqueta
+	"L": Color("#bdbdbd"),  # tachas prata
+	"o": Color("#212121"),  # acessório
+	"O": Color("#ffffff"),  # olho branco
+	"x": Color("#e91e63"),  # moicano rosa + cinto
+	"-": Color("#212121"),  # eyeliner
+	"F": Color("#ffccbc"),  # pele
+}
+
+# NINJA — máscara preta + faixa vermelha + gi escuro
+const PALETTE_NINJA := {
+	"#": Color("#212121"),  # gi preto
+	"=": Color("#0d0d0d"),  # sombra
+	"L": Color("#424242"),  # highlight
+	"o": Color("#fff8e1"),  # branco do olho
+	"O": Color("#ffffff"),
+	"x": Color("#b71c1c"),  # faixa vermelha
+	"-": Color("#000000"),
+	"F": Color("#ffccbc"),  # pele dos olhos
+}
+
+# CIBORGUE — corpo suit roxo metálico + circuitos verdes + mech eye
+const PALETTE_CYBORG := {
+	"#": Color("#7b1fa2"),  # corpo roxo
+	"=": Color("#4a148c"),  # sombra roxo escuro
+	"L": Color("#e040fb"),  # placa metal magenta
+	"o": Color("#90caf9"),  #
+	"O": Color("#ffffff"),  # olho normal branco
+	"x": Color("#00e676"),  # circuitos verde-neon
+	"-": Color("#0a0014"),
+	"F": Color("#ffe0b2"),  # face metade humana
+}
+
+# PIXEL GHOST — fantasma estilo arcade, semi-transparente, sem pernas
+const PALETTE_GHOST := {
+	"#": Color("#ffffff"),  # corpo branco
+	"=": Color("#e1bee7"),  # sombra suave roxa-clara
+	"L": Color("#f3e5f5"),  # highlight
+	"o": Color("#5e35b1"),  # pupila roxa
+	"O": Color("#ffffff"),  # olho branco
+	"x": Color("#ff1744"),  # núcleo glitch vermelho
+	"-": Color("#311b92"),  # contorno roxo profundo
+	"F": Color("#ce93d8"),
+}
+
 # Mantida pra compatibilidade com Echo (inimigo que mimica o sprite antigo do player).
 const PALETTE_PIXEL := {
 	"#": Color("#2a2a2a"),
@@ -627,6 +687,227 @@ const CHUBBY_IDLE: Array = [
 		"..==....==..",
 		"..==....==..",
 		"..--....--..",
+	],
+]
+
+# CAVALEIRO (12x18) — elmo com plumagem vermelha + armadura com cruz dourada.
+const KNIGHT_IDLE: Array = [
+	[
+		".....oo.....",
+		".....oo.....",
+		"....oooo....",
+		"...######...",
+		"..########..",
+		"..#------#..",
+		"..########..",
+		"...##LL##...",
+		".LL======LL.",
+		".==========.",
+		".==xxxxxx==.",
+		".==========.",
+		".LL======LL.",
+		"..========..",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+	[
+		".....oo.....",
+		".....oo.....",
+		"....oooo....",
+		"...######...",
+		"..########..",
+		"..#------#..",
+		"..########..",
+		"...##LL##...",
+		".LL======LL.",
+		".==========.",
+		".==oooooo==.",
+		".==========.",
+		".LL======LL.",
+		"..========..",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+]
+
+# PUNK (12x18) — moicano rosa + jaqueta de couro com tachas + calça rasgada.
+const PUNK_IDLE: Array = [
+	[
+		".....xx.....",
+		".....xx.....",
+		"....xxxx....",
+		"...FFFFFF...",
+		"..FFFFFFFF..",
+		"..F-OFFOF-..",
+		"..FFFFFFFF..",
+		"...FFFFFF...",
+		"..LL====LL..",
+		"..========..",
+		"..==xxxx==..",
+		"..========..",
+		"..LL====LL..",
+		"...======...",
+		"...##..##...",
+		"...#....#...",
+		"...##..##...",
+		"...==..==...",
+	],
+	[
+		".....xx.....",
+		".....xx.....",
+		"....xxxx....",
+		"...FFFFFF...",
+		"..FFFFFFFF..",
+		"..F-OFFOF-..",
+		"..FFFFFFFF..",
+		"...FFFFFF...",
+		"..LL====LL..",
+		"..========..",
+		"..==oooo==..",
+		"..========..",
+		"..LL====LL..",
+		"...======...",
+		"...##..##...",
+		"...#....#...",
+		"...##..##...",
+		"...==..==...",
+	],
+]
+
+# NINJA (12x18) — máscara preta + faixa vermelha + olhos brilhantes.
+const NINJA_IDLE: Array = [
+	[
+		"....####....",
+		"...######...",
+		"..########..",
+		"..xxxxxxxx..",
+		"..########..",
+		"..-OOOOOO-..",
+		"..########..",
+		"...######...",
+		"..L======L..",
+		"..========..",
+		".=xxxxxxxx=.",
+		"..========..",
+		"..L======L..",
+		"...======...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+	[
+		"....####....",
+		"...######...",
+		"..########..",
+		"..xxxxxxxx..",
+		"..########..",
+		"..-OooooO-..",
+		"..########..",
+		"...######...",
+		"..L======L..",
+		"..========..",
+		".=oooooooo=.",
+		"..========..",
+		"..L======L..",
+		"...======...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+]
+
+# CIBORGUE (12x18) — meio mecânico (lado direito), circuitos verdes no corpo.
+const CYBORG_IDLE: Array = [
+	[
+		"....####....",
+		"...######...",
+		"..##LLLL##..",
+		"..FFFFLLLL..",
+		"..FOFFxxLx..",
+		"..FFFFLLLL..",
+		"...FFFFFF...",
+		"..L======L..",
+		"..Lx=xx=xL..",
+		"..==xxxx==..",
+		"..Lx=xx=xL..",
+		"..L======L..",
+		"...##LL##...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+	[
+		"....####....",
+		"...######...",
+		"..##LLLL##..",
+		"..FFFFLLLL..",
+		"..FOFFxxLx..",
+		"..FFFFLLLL..",
+		"...FFFFFF...",
+		"..L======L..",
+		"..Lo=oo=oL..",
+		"..==oooo==..",
+		"..Lo=oo=oL..",
+		"..L======L..",
+		"...##LL##...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+]
+
+# PIXEL GHOST (12x18) — fantasma arcade. Corpo arredondado, sem pernas,
+# fundo wavy estilo Pac-Man, semi-transparente via cor pálida.
+const GHOST_IDLE: Array = [
+	[
+		"....####....",
+		"...######...",
+		"..########..",
+		".##########.",
+		".##oOOOOoo#.",
+		".##========.",
+		".##========.",
+		".##========.",
+		".##==xxxx==.",
+		".##========.",
+		".##========.",
+		".##========.",
+		".##========.",
+		".##========.",
+		"##.##..##.##",
+		"##..####..##",
+		"##........##",
+		"............",
+	],
+	[
+		"....####....",
+		"...######...",
+		"..########..",
+		".##########.",
+		".##oOOOOoo#.",
+		".##========.",
+		".##========.",
+		".##========.",
+		".##==oooo==.",
+		".##========.",
+		".##========.",
+		".##========.",
+		".##========.",
+		".##========.",
+		"##..####..##",
+		"##.##..##.##",
+		"##........##",
+		"............",
 	],
 ]
 
