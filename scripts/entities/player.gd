@@ -48,6 +48,7 @@ var crit_mult: float = 2.0
 var sprite: AnimatedSprite2D
 var weapon_sprite: Sprite2D
 var weapon_sprite_secondary: Sprite2D = null  ## ativada pelo cartucho Dual Wield
+var shadow_renderer: Node2D = null  ## sombra elíptica embaixo do player
 ## Renderer dos braços (Node2D customizado, definido como inner class abaixo).
 ## Tipado como Node2D em vez de _PlayerArms pra evitar forward reference no parser.
 var arms_renderer: Node2D = null
@@ -133,6 +134,12 @@ func _build_sprite() -> void:
 
 
 func _build_weapon_sprite() -> void:
+	# Sombra projetada — oval escuro embaixo do player. z_index NEGATIVO pra
+	# ficar atrás do corpo. Pulsa levemente com a animação de breath.
+	shadow_renderer = _PlayerShadow.new()
+	shadow_renderer.z_index = -1
+	add_child(shadow_renderer)
+
 	# Renderizador dos braços — Node2D customizado que desenha linhas do player
 	# até a(s) arma(s). z_index 1 (igual à arma) pra ficar acima do corpo.
 	arms_renderer = _PlayerArms.new()
@@ -168,6 +175,42 @@ func set_dual_wield(active: bool) -> void:
 	elif not active and weapon_sprite_secondary != null:
 		weapon_sprite_secondary.queue_free()
 		weapon_sprite_secondary = null
+
+
+## Sombra elíptica embaixo do player. Pulsa com a respiração e diminui durante
+## o dash (efeito "elevou do chão"). Dá leitura de profundidade pixel-art.
+class _PlayerShadow extends Node2D:
+	var visible_now: bool = true
+	var scale_factor: float = 1.0  ## seteado por _update_walk_animation (encolhe no pulo)
+	const RADIUS_X: float = 16.0
+	const RADIUS_Y: float = 4.0
+	const OFFSET_Y: float = 26.0  ## distância do centro do player até o "chão"
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		if not visible_now:
+			return
+		var rx: float = RADIUS_X * scale_factor
+		var ry: float = RADIUS_Y * scale_factor
+		var center := Vector2(0.0, OFFSET_Y)
+		# 3 elipses concêntricas com alphas crescentes — soft shadow.
+		_draw_ellipse(center, rx * 1.2, ry * 1.2, Color(0, 0, 0, 0.10))
+		_draw_ellipse(center, rx, ry, Color(0, 0, 0, 0.22))
+		_draw_ellipse(center, rx * 0.7, ry * 0.7, Color(0, 0, 0, 0.30))
+
+	## Aproxima elipse com 12 vértices via draw_polygon.
+	func _draw_ellipse(center: Vector2, rx: float, ry: float, color: Color) -> void:
+		var pts: PackedVector2Array = PackedVector2Array()
+		var segments := 16
+		for i in segments:
+			var a: float = TAU * float(i) / float(segments)
+			pts.append(center + Vector2(cos(a) * rx, sin(a) * ry))
+		var colors: PackedColorArray = PackedColorArray()
+		for i in segments:
+			colors.append(color)
+		draw_polygon(pts, colors)
 
 
 ## Renderizador dos braços — Node2D que desenha linhas grossas entre o player
@@ -308,6 +351,12 @@ func _spawn_afterimage(tint: Color, lifetime: float, end_scale_mult: float) -> v
 func _update_walk_animation(delta: float) -> void:
 	if sprite == null:
 		return
+	# Atualiza sombra: encolhe durante dash (parece pulou do chão).
+	if shadow_renderer != null:
+		var target_shadow: float = 0.55 if _dash_timer > 0.0 else 1.0
+		shadow_renderer.scale_factor = lerpf(
+			shadow_renderer.scale_factor, target_shadow, delta * 10.0
+		)
 	var speed_sq: float = velocity.length_squared()
 	var base_scale: float = sprite_scale_value
 	if speed_sq > 100.0:
@@ -598,6 +647,8 @@ func _start_death_sequence() -> void:
 		weapon_sprite_secondary.visible = false
 	if arms_renderer != null:
 		arms_renderer.visible_now = false
+	if shadow_renderer != null:
+		shadow_renderer.visible_now = false
 
 	HitStop.freeze(0.15)
 	Audio.play(Audio.Sfx.PLAYER_HURT)

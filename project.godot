@@ -51,6 +51,7 @@ Konami="*res://scripts/autoload/konami.gd"
 DailyRun="*res://scripts/autoload/daily_run.gd"
 ModifierSystem="*res://scripts/autoload/modifier_system.gd"
 TalentTree="*res://scripts/autoload/talent_tree.gd"
+CritFlash="*res://scripts/ui/crit_flash.gd"
 
 [display]
 

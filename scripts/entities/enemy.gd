@@ -131,9 +131,10 @@ func take_damage(amount: int, _knockback_dir: Vector2 = Vector2.ZERO, is_crit: b
 	GameState.register_damage_dealt(dealt)
 	_flash_timer = 0.10 if is_crit else 0.06
 	_spawn_damage_number(amount, is_crit)
-	# Crits dão hit-stop curto pra dar peso ao impacto.
+	# Crits dão hit-stop curto + screen flash pra dar peso ao impacto.
 	if is_crit:
 		HitStop.freeze()
+		CritFlash.flash()
 	if current_hp <= 0:
 		_die()
 
