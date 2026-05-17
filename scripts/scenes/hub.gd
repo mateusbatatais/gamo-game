@@ -37,14 +37,18 @@ func _build() -> void:
 	title.size = Vector2(160, 24)
 	add_child(title)
 
-	var stats := Label.new()
-	stats.text = _format_stats()
-	stats.add_theme_font_size_override("font_size", 11)
-	stats.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-	stats.position = Vector2(VIEWPORT_W - 280, 10)
-	stats.size = Vector2(270, 14)
-	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	add_child(stats)
+	# Stats removidos do topo da hub — já aparecem no menu principal.
+	# Em vez disso, mostra só "PRESTIGE NG+X" se aplicável (compacto).
+	if GameState.prestige_level > 0:
+		var prestige := Label.new()
+		prestige.text = "★ NG+%d" % GameState.prestige_level
+		prestige.add_theme_font_size_override("font_size", 12)
+		prestige.add_theme_color_override("font_color", Color("#e040fb"))
+		prestige.add_theme_color_override("font_outline_color", Color.BLACK)
+		prestige.add_theme_constant_override("outline_size", 2)
+		prestige.position = Vector2(180, 10)
+		prestige.size = Vector2(80, 16)
+		add_child(prestige)
 
 	_build_spirits_panel()
 	_build_collection_panel()
@@ -53,11 +57,11 @@ func _build() -> void:
 
 
 func _build_npcs() -> void:
-	# Strip de 3 NPCs visitantes no topo, abaixo do título.
-	# Reduzido pra não tocar o token label à direita.
+	# 3 NPCs como avatares compactos no canto superior direito.
+	# Sem labels — só ícone colorido + tooltip com nome (clique abre dialog).
 	var npcs := HubNpcs.new()
-	npcs.position = Vector2(12, 34)
-	npcs.size = Vector2(390, 22)
+	npcs.position = Vector2(VIEWPORT_W - 110, 6)
+	npcs.size = Vector2(98, 22)
 	add_child(npcs)
 
 
@@ -361,7 +365,9 @@ func _refresh_skin_info(info: Label) -> void:
 	if def == null:
 		info.text = ""
 		return
-	info.text = "[%s] %s" % [def.display_name.to_upper(), def.description]
+	# Só o nome da skin — descrição completa fica no tooltip (não polui o card).
+	info.text = "SKIN: %s" % def.display_name.to_upper()
+	info.tooltip_text = def.description
 
 
 func _grayscale(palette: Dictionary) -> Dictionary:

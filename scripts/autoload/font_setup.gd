@@ -18,8 +18,11 @@ func _ready() -> void:
 		var ff: FontFile = fb
 		# Antialiasing GRAYSCALE em vez de NONE — preserva feel chunky em textos
 		# grandes mas evita jaggies severas nos labels pequenos (10-12).
-		ff.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
-		ff.hinting = TextServer.HINTING_FULL
+		# Pixel-perfect: sem antialiasing, sem hinting, sem subpixel.
+		# Mantém o look retro 16-bit — em canvas_items mode renderiza com mais
+		# pixels por glyph que o viewport mode original, então fica legível.
+		ff.antialiasing = TextServer.FONT_ANTIALIASING_NONE
+		ff.hinting = TextServer.HINTING_NONE
 		ff.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
 		ff.force_autohinter = false
 		ff.allow_system_fallback = false

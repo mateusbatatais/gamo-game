@@ -5,7 +5,7 @@
 class_name HubNpcs
 extends Control
 
-const NPC_W := 124
+const NPC_W := 28
 const NPC_H := 22
 
 # Banco de falas por NPC. Cada clique sorteia uma diferente.
@@ -44,37 +44,38 @@ func _build() -> void:
 	var hbox := HBoxContainer.new()
 	hbox.position = Vector2.ZERO
 	hbox.size = size
-	hbox.add_theme_constant_override("separation", 8)
+	hbox.add_theme_constant_override("separation", 6)
 	add_child(hbox)
 
+	# Avatares compactos — só inicial + cor, nome no tooltip.
 	hbox.add_child(_make_npc_btn(
-		"BIBLIOTECARIA", "Bibliotecária", Color("#9bbc0f"), LINES_BIBLIOTECARIA
+		"BIBLIOTECARIA", "Bibliotecária", "B", Color("#9bbc0f"), LINES_BIBLIOTECARIA
 	))
 	hbox.add_child(_make_npc_btn(
-		"ENGENHEIRO", "Engenheiro", Color("#00e5ff"), LINES_ENGENHEIRO
+		"ENGENHEIRO", "Engenheiro", "E", Color("#00e5ff"), LINES_ENGENHEIRO
 	))
 	hbox.add_child(_make_npc_btn(
-		"DETETIVE_GLITCH", "Detetive Glitch", Color("#ffeb3b"), LINES_DETETIVE
+		"DETETIVE_GLITCH", "Detetive Glitch", "D", Color("#ffeb3b"), LINES_DETETIVE
 	))
 
 
-func _make_npc_btn(id: String, label_text: String, accent: Color, lines: Array) -> Button:
+func _make_npc_btn(id: String, label_text: String, initial: String, accent: Color, lines: Array) -> Button:
 	var btn := Button.new()
 	btn.custom_minimum_size = Vector2(NPC_W, NPC_H)
-	btn.text = "● " + label_text.to_upper()
-	btn.add_theme_font_size_override("font_size", 10)
+	btn.text = initial
+	btn.add_theme_font_size_override("font_size", 14)
 	btn.add_theme_color_override("font_color", accent)
 	btn.add_theme_color_override("font_hover_color", Color.WHITE)
 	btn.add_theme_color_override("font_focus_color", Color.WHITE)
 	btn.add_theme_color_override("font_outline_color", Color.BLACK)
 	btn.add_theme_constant_override("outline_size", 2)
-	btn.tooltip_text = "Clique pra conversar com %s" % label_text
+	btn.tooltip_text = "%s — clique pra falar" % label_text
 
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.05, 0.07, 0.12, 0.65)
-	sb.border_color = Color(accent.r, accent.g, accent.b, 0.6)
+	sb.bg_color = Color(0.05, 0.07, 0.12, 0.75)
+	sb.border_color = Color(accent.r, accent.g, accent.b, 0.75)
 	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(2)
+	sb.set_corner_radius_all(3)
 	btn.add_theme_stylebox_override("normal", sb)
 
 	var sb_focus := sb.duplicate() as StyleBoxFlat
