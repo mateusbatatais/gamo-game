@@ -75,12 +75,12 @@ func _register_all() -> void:
 		func(): return GameState.bosses_defeated.size() >= 1
 	))
 	_add(AchievementDef.new(
-		"survive_5min", "Anti-Glitch", "Sobreviva 5 minutos contra a corrupção.",
-		func(): return GameState.best_run_time >= 300.0
+		"survive_5min", "Anti-Glitch", "Chegue até o boss em alguma fase.",
+		func(): return GameState.best_run_time >= 180.0
 	))
 	_add(AchievementDef.new(
-		"survive_full", "Defensor da Coleção Eterna", "Sobreviva os 6 minutos completos.",
-		func(): return GameState.best_run_time >= 360.0
+		"survive_full", "Defensor da Coleção Eterna", "Complete a run inteira (todos os bosses).",
+		func(): return GameState.bosses_defeated.size() >= 2
 	))
 	_add(AchievementDef.new(
 		"tokens_500", "Mestre do Arquivo", "Acumule 500 Tokens de Memória no total.",

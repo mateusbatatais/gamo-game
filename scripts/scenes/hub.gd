@@ -16,6 +16,7 @@ func _ready() -> void:
 	# 8-bit foi removido — força sempre 16-bit.
 	_selected_era_id = "era_16bit"
 	GameState.selected_era_id = "era_16bit"
+	Music.play_menu()
 	_build()
 
 

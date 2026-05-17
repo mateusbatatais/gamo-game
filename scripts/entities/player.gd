@@ -63,6 +63,7 @@ var _knockback_dir: Vector2 = Vector2.ZERO
 var _facing: int = 1
 var _walk_phase: float = 0.0  # avança quando o player está se movendo
 var _trail_timer: float = 0.0
+var _dying: bool = false  # bloqueia input/dano enquanto a morte cinemática roda
 
 
 func _ready() -> void:
@@ -155,27 +156,44 @@ func _physics_process(delta: float) -> void:
 
 
 ## Spawna afterimages do sprite atual durante o dash — efeito clássico de speedster.
+## Também spawna um trail sutil (menos frequente, mais transparente) quando o
+## player tá se movendo em velocidade alta — feel de "deixando rastro pixelado".
 func _update_dash_trail(delta: float) -> void:
-	if _dash_timer <= 0.0 or sprite == null:
+	if sprite == null:
+		return
+	# Dash: afterimage intenso azul a cada 0.03s.
+	if _dash_timer > 0.0:
+		_trail_timer -= delta
+		if _trail_timer > 0.0:
+			return
+		_trail_timer = DASH_TRAIL_INTERVAL
+		_spawn_afterimage(DASH_TRAIL_COLOR, DASH_TRAIL_LIFETIME, 0.6)
+		return
+	# Walk trail: afterimage sutil branco a cada 0.08s quando se movendo rápido.
+	# Só faz se a velocidade efetiva for considerável (não conta knockback).
+	if velocity.length_squared() > 12000.0:  # ~110 px/s
+		_trail_timer -= delta
+		if _trail_timer > 0.0:
+			return
+		_trail_timer = 0.08
+		_spawn_afterimage(Color(1.0, 1.0, 1.0, 0.35), 0.18, 0.85)
+	else:
 		_trail_timer = 0.0
-		return
-	_trail_timer -= delta
-	if _trail_timer > 0.0:
-		return
-	_trail_timer = DASH_TRAIL_INTERVAL
+
+
+func _spawn_afterimage(tint: Color, lifetime: float, end_scale_mult: float) -> void:
 	var ghost := Sprite2D.new()
 	ghost.texture = sprite.sprite_frames.get_frame_texture("default", sprite.frame)
 	ghost.centered = true
 	ghost.scale = sprite.scale
 	ghost.flip_h = sprite.flip_h
 	ghost.global_position = global_position
-	ghost.modulate = DASH_TRAIL_COLOR
+	ghost.modulate = tint
 	ghost.z_index = z_index - 1
 	get_parent().add_child(ghost)
-	# Tween de fade-out + queue_free no fim. Roda no nó pai pra não morrer com o player.
 	var tween := ghost.create_tween()
-	tween.tween_property(ghost, "modulate:a", 0.0, DASH_TRAIL_LIFETIME)
-	tween.parallel().tween_property(ghost, "scale", sprite.scale * 0.6, DASH_TRAIL_LIFETIME)
+	tween.tween_property(ghost, "modulate:a", 0.0, lifetime)
+	tween.parallel().tween_property(ghost, "scale", sprite.scale * end_scale_mult, lifetime)
 	tween.tween_callback(ghost.queue_free)
 
 
@@ -336,6 +354,10 @@ func _check_enemy_contact() -> void:
 func take_damage(amount: int, knockback_source_dir: Vector2 = Vector2.ZERO) -> void:
 	if _invul_timer > 0.0:
 		return
+	# Filtra pelo BoonSystem (IRON_SKIN reduz dano em 50% se ativo).
+	amount = BoonSystem.filter_damage(amount)
+	if amount <= 0:
+		return
 	current_hp = max(0, current_hp - amount)
 	_invul_timer = HURT_INVUL_TIME
 	_hurt_flash_timer = HURT_FLASH_TIME
@@ -343,9 +365,21 @@ func take_damage(amount: int, knockback_source_dir: Vector2 = Vector2.ZERO) -> v
 		_knockback_dir = knockback_source_dir.normalized()
 		_knockback_timer = KNOCKBACK_DURATION
 	Audio.play(Audio.Sfx.PLAYER_HURT)
+	_spawn_hurt_number(amount)
 	EventBus.player_damaged.emit(amount, current_hp, max_hp)
 	if current_hp <= 0:
 		_die()
+
+
+func _spawn_hurt_number(amount: int) -> void:
+	if amount <= 0:
+		return
+	var dn := DamageNumber.new()
+	dn.global_position = global_position + Vector2(
+		randf_range(-6.0, 6.0), -14.0 + randf_range(-4.0, 4.0)
+	)
+	dn.setup(amount, false, DamageNumber.Kind.PLAYER_HURT)
+	get_parent().add_child(dn)
 
 
 func heal(amount: int) -> void:
@@ -366,6 +400,134 @@ func _die() -> void:
 		_invul_timer = 2.0
 		EventBus.player_healed.emit(current_hp, current_hp, max_hp)
 		return
+	_start_death_sequence()
+
+
+## Sequência cinemática de morte: freeze, explosões em cascata, sprite enche/fade,
+## shake, vinheta escura, texto "GLITCH PREVAILS" entrando com bounce.
+## Após ~2.2s, emite player_died pra arena finalizar a run.
+func _start_death_sequence() -> void:
+	if _dying:
+		return
+	_dying = true
+	_invul_timer = 9999.0
+	velocity = Vector2.ZERO
+	set_physics_process(false)
+	# Desliga os cartuchos (não dispara mais nada durante a cinematics).
+	if cartridge_root != null:
+		cartridge_root.process_mode = Node.PROCESS_MODE_DISABLED
+	if weapon_sprite != null:
+		weapon_sprite.visible = false
+
+	HitStop.freeze(0.15)
+	Audio.play(Audio.Sfx.PLAYER_HURT)
+	Audio.play(Audio.Sfx.ENEMY_DIE)
+	Music.stop()
+
+	# 6 ondas de partículas escalonadas em torno do player.
+	for wave in 6:
+		var delay: float = float(wave) * 0.12
+		var t := get_tree().create_timer(delay, true, false, true)
+		t.timeout.connect(_spawn_death_burst)
+
+	# Animação do sprite: vermelho intenso → branco ofuscado → fade transparente.
+	if sprite != null:
+		var color_tween := create_tween()
+		color_tween.set_ignore_time_scale(true)
+		color_tween.tween_property(sprite, "modulate", Color(3.0, 0.4, 0.4, 1.0), 0.15)
+		color_tween.tween_property(sprite, "modulate", Color(3.0, 3.0, 3.0, 1.0), 0.20)
+		color_tween.tween_property(sprite, "modulate", Color(1.0, 1.0, 1.0, 0.0), 0.55)
+		# Scale up junto pra dar peso.
+		var scale_tween := create_tween()
+		scale_tween.set_ignore_time_scale(true)
+		scale_tween.tween_property(sprite, "scale", sprite.scale * 1.7, 0.85) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_CUBIC)
+
+	# Shake forte via arena.
+	_trigger_death_shake()
+	# Overlay com vinheta + "GLITCH PREVAILS".
+	_build_death_overlay()
+	# Após 2.2s, sinaliza a arena pra avançar pro game-over.
+	get_tree().create_timer(2.2, true, false, true).timeout.connect(_finalize_death)
+
+
+func _spawn_death_burst() -> void:
+	if not is_instance_valid(get_parent()):
+		return
+	var dp := DeathParticle.new()
+	dp.global_position = global_position + Vector2(
+		randf_range(-16.0, 16.0), randf_range(-16.0, 16.0)
+	)
+	# Mistura de cores quentes (vermelho/amarelo) + flash magenta ocasional.
+	var col: Color = Color("#ff5252")
+	var roll: float = randf()
+	if roll > 0.7:
+		col = Color("#ffeb3b")
+	elif roll > 0.9:
+		col = Color("#e040fb")
+	dp.setup(col)
+	get_parent().add_child(dp)
+
+
+func _trigger_death_shake() -> void:
+	# Sobe na árvore até achar o nó com trigger_shake (arena).
+	var n: Node = get_parent()
+	while n != null and not n.has_method("trigger_shake"):
+		n = n.get_parent()
+	if n != null:
+		n.call("trigger_shake", 10.0, 1.0)
+
+
+func _build_death_overlay() -> void:
+	var scene_root: Node = get_tree().current_scene
+	if scene_root == null:
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 9
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	scene_root.add_child(layer)
+
+	# Vinheta escurecendo a tela
+	var vignette := ColorRect.new()
+	vignette.color = Color(0, 0, 0, 0)
+	vignette.anchor_right = 1.0
+	vignette.anchor_bottom = 1.0
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(vignette)
+	var v_tween := vignette.create_tween()
+	v_tween.set_ignore_time_scale(true)
+	v_tween.tween_property(vignette, "color:a", 0.62, 1.4) \
+		.set_ease(Tween.EASE_IN)
+
+	# Label "GLITCH PREVAILS" gigante entrando com bounce após 0.7s.
+	var label := Label.new()
+	label.text = "GLITCH PREVAILS"
+	label.add_theme_font_size_override("font_size", 56)
+	label.add_theme_color_override("font_color", Color("#ff0080"))
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 6)
+	label.anchor_left = 0.5
+	label.anchor_right = 0.5
+	label.anchor_top = 0.5
+	label.position = Vector2(-280, -40)
+	label.size = Vector2(560, 64)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.pivot_offset = Vector2(280, 32)
+	label.scale = Vector2(0.1, 0.1)
+	label.modulate = Color(1, 1, 1, 0)
+	layer.add_child(label)
+	var l_tween := label.create_tween().set_parallel(true)
+	l_tween.set_ignore_time_scale(true)
+	l_tween.tween_property(label, "scale", Vector2.ONE, 0.5) \
+		.set_delay(0.7) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_BACK)
+	l_tween.tween_property(label, "modulate:a", 1.0, 0.4) \
+		.set_delay(0.7)
+
+
+func _finalize_death() -> void:
 	EventBus.player_died.emit()
 
 

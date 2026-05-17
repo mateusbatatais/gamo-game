@@ -37,10 +37,21 @@ func _fire() -> void:
 	if target == null:
 		return
 	var dir := (target.global_position - player.global_position).normalized()
+	_fire_projectile(player.global_position, dir, _damage(), _pierce_count())
+	if BoonSystem.has_active(BoonSystem.Kind.DOUBLE_SHOT):
+		var perp := Vector2(-dir.y, dir.x) * 10.0
+		_fire_projectile(player.global_position + perp, dir, _damage(), _pierce_count())
+
+
+func _pierce_count() -> int:
+	return BASE_PIERCE + level - 1
+
+
+func _fire_projectile(start: Vector2, dir: Vector2, dmg: int, pierce: int) -> void:
 	var proj := Projectile.new()
 	proj.tint = TINT
 	proj.crit_chance = player.crit_chance
 	proj.crit_mult = player.crit_mult
-	proj.setup(player.global_position, dir, _damage(), BASE_SPEED, BASE_PIERCE + level - 1)
+	proj.setup(start, dir, dmg, BASE_SPEED, pierce)
 	player.get_parent().add_child(proj)
 	Audio.play(Audio.Sfx.SHOOT)

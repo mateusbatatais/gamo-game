@@ -39,10 +39,18 @@ func _fire() -> void:
 	if target == null:
 		return
 	var dir := (target.global_position - player.global_position).normalized()
+	_fire_projectile(player.global_position, dir, _damage(), BASE_SPEED)
+	# DOUBLE_SHOT: dispara projétil extra perpendicular sutil.
+	if BoonSystem.has_active(BoonSystem.Kind.DOUBLE_SHOT):
+		var perp := Vector2(-dir.y, dir.x) * 8.0
+		_fire_projectile(player.global_position + perp, dir, _damage(), BASE_SPEED)
+
+
+func _fire_projectile(start: Vector2, dir: Vector2, dmg: int, speed: float) -> void:
 	var proj := Projectile.new()
 	proj.tint = TINT
 	proj.crit_chance = player.crit_chance
 	proj.crit_mult = player.crit_mult
-	proj.setup(player.global_position, dir, _damage(), BASE_SPEED, 0)
+	proj.setup(start, dir, dmg, speed, 0)
 	player.get_parent().add_child(proj)
 	Audio.play(Audio.Sfx.SHOOT)

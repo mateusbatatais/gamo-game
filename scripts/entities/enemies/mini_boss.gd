@@ -97,4 +97,10 @@ func _die() -> void:
 	p.global_position = global_position + Vector2(0, 10)
 	get_parent().add_child(p)
 
+	# Boon temporário garantido — sorteia entre os 5 tipos.
+	var boon := BoonPickup.new()
+	boon.kind = randi() % BoonSystem.Kind.size()
+	boon.global_position = global_position + Vector2(-14, 0)
+	get_parent().add_child(boon)
+
 	queue_free()

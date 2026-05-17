@@ -155,6 +155,254 @@ const PALETTE_FRAGMENTATION := {
 	"X": Color("#ff5252"),
 }
 
+# === Era 2 (32-bit CD) — paletas iridescentes "óleo no CD" ===
+const PALETTE_POLYGON := {
+	"#": Color("#00838f"),  # ciano-escuro
+	"=": Color("#006064"),
+	"o": Color("#00e5ff"),  # ciano-laser
+	"O": Color("#80deea"),
+}
+
+const PALETTE_SCRATCH := {
+	"#": Color("#ffffff"),  # branco
+	"=": Color("#9e9e9e"),
+	"-": Color("#000000"),
+}
+
+const PALETTE_FMV := {
+	"#": Color("#ff6f00"),  # laranja FMV
+	"=": Color("#bf360c"),
+	"o": Color("#ffd180"),
+	"O": Color("#000000"),
+}
+
+const PALETTE_BAD_SECTOR := {
+	"#": Color("#0d47a1"),  # azul-disco
+	"=": Color("#1565c0"),
+	"o": Color("#ffffff"),  # leitura óptica
+	"O": Color("#212121"),
+	"-": Color("#000000"),
+	"X": Color("#ff5252"),  # warning vermelho
+}
+
+# Polygon (8x8) — triângulo pseudo-3D que rotaciona
+const POLYGON_IDLE: Array = [
+	[
+		"...##...",
+		"..####..",
+		".######.",
+		"########",
+		".##oo##.",
+		"..#oo#..",
+		"...##...",
+		"........",
+	],
+	[
+		"...##...",
+		"..####..",
+		".###o##.",
+		"##oooo##",
+		".######.",
+		"..####..",
+		"...##...",
+		"........",
+	],
+]
+
+# Scratch (12x4) — risco horizontal que corre pela tela tipo CD arranhado
+const SCRATCH_IDLE: Array = [
+	[
+		"############",
+		"##-####-####",
+		"-##-#--#####",
+		"############",
+	],
+	[
+		"############",
+		"-##-#--#####",
+		"##-####-####",
+		"############",
+	],
+]
+
+# FMV Burst (10x8) — bloco de vídeo full-motion corrompido
+const FMV_IDLE: Array = [
+	[
+		"##########",
+		"#========#",
+		"#=oOooOo=#",
+		"#=OoOooO=#",
+		"#=oOoOoo=#",
+		"#=OoOoOo=#",
+		"#========#",
+		"##########",
+	],
+	[
+		"##########",
+		"#========#",
+		"#=OoOooO=#",
+		"#=oOoOoo=#",
+		"#=OoOooO=#",
+		"#=oOoOoo=#",
+		"#========#",
+		"##########",
+	],
+]
+
+# === Era 3 (64-bit) — paletas pastel + cinza fog ===
+const PALETTE_WIREFRAME := {
+	"#": Color("#90a4ae"),  # cinza fog azulado
+	"=": Color("#546e7a"),
+	"o": Color("#e8eaf6"),  # branco-fog
+	"O": Color("#37474f"),  # contorno escuro
+}
+
+const PALETTE_ZFIGHT := {
+	"#": Color("#80deea"),  # ciano-papel
+	"=": Color("#fb8c00"),  # laranja Z-flicker (conflito)
+	"o": Color("#ffffff"),
+	"O": Color("#212121"),
+}
+
+const PALETTE_POLYGON_HELL := {
+	"#": Color("#7e57c2"),  # roxo low-poly
+	"=": Color("#4527a0"),  # roxo profundo
+	"o": Color("#ff5252"),  # vermelho-pixel
+	"O": Color("#ffffff"),
+	"-": Color("#1a0033"),
+	"X": Color("#ffeb3b"),  # destaque amarelo
+}
+
+# Wireframe Hulk (12x12) — tanque pseudo-3D com contornos pesados
+const WIREFRAME_IDLE: Array = [
+	[
+		"...########.",
+		"..##OOOOOO##",
+		".##========#",
+		"##==######=#",
+		"##=#oooooo#=",
+		"##=#oOOOOo#=",
+		"##=#oOOOOo#=",
+		"##=#oooooo#=",
+		"##=######=##",
+		"##========##",
+		"##OOOOOOOO##",
+		".##########.",
+	],
+	[
+		"...########.",
+		"..##OOOOOO##",
+		".##========#",
+		"##==######=#",
+		"##=#OoooOO#=",
+		"##=#oOOoOo#=",
+		"##=#OoOOoO#=",
+		"##=#OOoooO#=",
+		"##=######=##",
+		"##========##",
+		"##OOOOOOOO##",
+		".##########.",
+	],
+]
+
+# Z-Fight (10x10) — sprite com flicker entre 2 frames distintos
+const ZFIGHT_IDLE: Array = [
+	[
+		"...####...",
+		"..######..",
+		".#=oooo=#.",
+		"#=oOOOOo=#",
+		"#=oO##Oo=#",
+		"#=oO##Oo=#",
+		"#=oOOOOo=#",
+		".#=oooo=#.",
+		"..######..",
+		"...####...",
+	],
+	[
+		"##......##",
+		"=========.",
+		"..########",
+		"##=oOOOo==",
+		"=oO####Oo=",
+		"=oO####Oo=",
+		"##=oOOOo==",
+		"..########",
+		"=========.",
+		"##......##",
+	],
+]
+
+# Polygon Hell boss (20x20) — pirâmide corrompida com olho central
+const POLYGON_HELL_IDLE: Array = [
+	[
+		".........##.........",
+		"........####........",
+		".......##oo##.......",
+		"......##oOOo##......",
+		".....##oO##Oo##.....",
+		"....##oO####Oo##....",
+		"...##oO##XX##Oo##...",
+		"..##oO##oOOo##Oo##..",
+		".##oO##oO##Oo##Oo##.",
+		"####oO##oO##Oo####.#",
+		"###oO####O####Oo###.",
+		".###oOOOOoOOOOoOo##.",
+		"..##====oooo====##..",
+		"...##############...",
+		"....############....",
+		".....##########.....",
+		"......########......",
+		".......######.......",
+		"........####........",
+		".........##.........",
+	],
+]
+
+# Bad Sector (18x18) — disco corrompido com setor vermelho
+const BAD_SECTOR_IDLE: Array = [
+	[
+		"....##########....",
+		"..##############..",
+		".################.",
+		"##====oooooo====##",
+		"##=oooo####oooo=##",
+		"##oo##========##oo",
+		"##oo##=oOOOo==##oo",
+		"##oo##=O####o=##oo",
+		"##oo##=O####o=##oo",
+		"##oo##=O####o=##oo",
+		"##oo##=oOOOo==##oo",
+		"##oo##========##oo",
+		"##=oooo####oooo=##",
+		"##====oooooo====##",
+		".################.",
+		"..##############..",
+		"....##########....",
+		"......######......",
+	],
+	[
+		"....##XXXXXXXX....",
+		"..##############..",
+		".################.",
+		"##====oooooo====##",
+		"##=oooo####oooo=##",
+		"##oo##========##oo",
+		"##oo##=OoooO==##oo",
+		"##oo##=o####O=##oo",
+		"##oo##=o####O=##oo",
+		"##oo##=o####O=##oo",
+		"##oo##=OoooO==##oo",
+		"##oo##========##oo",
+		"##=oooo####oooo=##",
+		"##====oooooo====##",
+		".################.",
+		"..XXXXXXXX####....",
+		"....##########....",
+		"......######......",
+	],
+]
+
 # --- Frames (ASCII art) ---
 # GAMO Tier 1 (12x18) — robô mascote base, sem armadura.
 # Cabeça com visor expressivo (2 olhos), corpo com núcleo de energia laranja,

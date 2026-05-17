@@ -8,21 +8,36 @@ const RISE_DISTANCE := 28.0
 const HORIZONTAL_DRIFT := 14.0
 const NORMAL_COLOR := Color("#ffffff")
 const CRIT_COLOR := Color("#ffeb3b")
+const PLAYER_HURT_COLOR := Color("#ff5252")
+
+enum Kind { NORMAL, CRIT, PLAYER_HURT }
 
 var _age: float = 0.0
 var _label: Label
 var _drift_x: float = 0.0
 
 
-func setup(amount: int, is_crit: bool = false) -> void:
+## Dispara o damage number. is_crit/kind selecionam cor e tamanho.
+## Mantém a assinatura antiga via Kind.NORMAL/CRIT, e adiciona PLAYER_HURT pra dano no player.
+func setup(amount: int, is_crit: bool = false, kind: int = Kind.NORMAL) -> void:
 	_label = Label.new()
 	_label.text = str(amount)
 	var font_size: int = 12
 	var col: Color = NORMAL_COLOR
-	if is_crit:
-		_label.text += "!"
-		font_size = 18
-		col = CRIT_COLOR
+	# Backwards-compat: is_crit dispara Kind.CRIT se kind for NORMAL.
+	if is_crit and kind == Kind.NORMAL:
+		kind = Kind.CRIT
+	match kind:
+		Kind.CRIT:
+			_label.text += "!"
+			font_size = 18
+			col = CRIT_COLOR
+		Kind.PLAYER_HURT:
+			_label.text = "-" + str(amount)
+			font_size = 14
+			col = PLAYER_HURT_COLOR
+		_:
+			pass
 	_label.add_theme_font_size_override("font_size", font_size)
 	_label.add_theme_color_override("font_color", col)
 	_label.add_theme_color_override("font_outline_color", Color.BLACK)

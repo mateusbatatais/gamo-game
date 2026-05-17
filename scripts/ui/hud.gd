@@ -5,8 +5,8 @@ extends CanvasLayer
 const VIEWPORT_W := 640
 const VIEWPORT_H := 360
 # Marcadores na barra de progresso da fase — espelham os tempos do Arena.
-const BOSS_SPAWN_TIME := 360.0
-const MINI_BOSS_TIMES := [90.0, 210.0, 330.0]
+const BOSS_SPAWN_TIME := 180.0
+const MINI_BOSS_TIMES := [60.0, 130.0]
 const STAGE_BAR_WIDTH := 300.0
 const STAGE_BAR_HEIGHT := 6.0
 
@@ -45,8 +45,17 @@ func _ready() -> void:
 	_build_boss_ui()
 	_build_warning_label()
 	_build_combo_label()
+	_build_boon_strip()
 	_build_hp_vignette()
 	_connect_signals()
+
+
+func _build_boon_strip() -> void:
+	# Strip de boons ativos no canto superior esquerdo, abaixo do HP.
+	var strip := BoonStrip.new()
+	strip.position = Vector2(8, 42)
+	strip.size = Vector2(220, 28)
+	add_child(strip)
 
 
 func _build_stage_progress() -> void:
@@ -375,14 +384,12 @@ func _update_stage_progress() -> void:
 		_boss_countdown_label.text = "BOSS!"
 		_boss_countdown_label.visible = true
 
-	# Texto "FASE 1 — Wave X" muda conforme avanços
-	var stage_text := "FASE 1"
+	# Texto "FASE X/Y — WAVE Z" muda conforme avanços e usa GameState.stage_label.
+	var stage_text: String = GameState.stage_label()
 	if GameState.run_time < MINI_BOSS_TIMES[0]:
 		stage_text += " — WAVE INICIAL"
 	elif GameState.run_time < MINI_BOSS_TIMES[1]:
 		stage_text += " — WAVE 2"
-	elif GameState.run_time < MINI_BOSS_TIMES[2]:
-		stage_text += " — WAVE 3"
 	elif GameState.run_time < BOSS_SPAWN_TIME:
 		stage_text += " — WAVE FINAL"
 	else:
@@ -502,6 +509,10 @@ func _on_boss_defeated() -> void:
 	_boss_name.add_theme_color_override("font_color", Color("#9bbc0f"))
 	_boss_bar.visible = false
 	_boss_bar_bg.visible = false
+	# Se ainda há fases adiante, esconde UI do boss e mostra a barra de progresso da próxima fase.
+	if not GameState.is_last_stage() and _stage_bar_root != null:
+		_stage_bar_root.visible = true
+		_boss_name.visible = false
 
 
 func _make_cartridge_slot(def: CartridgeRegistry.CartridgeDef, level: int) -> Control:

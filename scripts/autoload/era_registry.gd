@@ -48,6 +48,22 @@ const PALETTE_ERA_16BIT := {
 	"scan": Color(0, 0, 0, 0.12),
 }
 
+# Era 2 — 32-bit CD: paleta iridescente "óleo no disco"
+const PALETTE_ERA_32BIT := {
+	"bg_top": Color("#0a1a3a"),     # azul-noite CD
+	"bg_bottom": Color("#1a0a2a"),  # roxo-disco
+	"grid": Color("#5e35b1"),
+	"scan": Color(0, 0, 0, 0.14),
+}
+
+# Era 3 — 64-bit: pastel + cinza fog (low-poly aesthetic)
+const PALETTE_ERA_64BIT := {
+	"bg_top": Color("#37474f"),     # cinza-azulado
+	"bg_bottom": Color("#1a0033"),  # roxo-poligonal
+	"grid": Color("#7e57c2"),
+	"scan": Color(0, 0, 0, 0.10),
+}
+
 
 var _registry: Dictionary = {}
 
@@ -90,8 +106,44 @@ func _register_all() -> void:
 			["bit_flip",    190.0, 0.7],
 		],
 		"Fragmentation",
-		"Fragmentation",
-		"Derrote Corruption v1.0 na Era 8-bit"
+		"Fragmentation"
+	))
+	_add(EraDef.new(
+		"era_32bit_cd",
+		"Era 32-bit CD",
+		"O Glitch invadiu a era do disco óptico. Polígonos e arranhões.",
+		PALETTE_ERA_32BIT,
+		[
+			["polygon",      0.0, 0.7],
+			["scratch",      0.0, 0.5],
+			["fmv",         20.0, 0.6],
+			["compression",  0.0, 0.5],   # legado da era anterior
+			["null_sprite", 60.0, 0.5],
+			["bit_flip",   120.0, 0.5],
+			["memory_leak",150.0, 0.4],
+		],
+		"BadSector",
+		"Bad Sector",
+		"Derrote Fragmentation na Era 16-bit"
+	))
+	_add(EraDef.new(
+		"era_64bit",
+		"Era 64-bit",
+		"Polígonos pseudo-3D, fog distance, z-fighting. Pior pesadelo do hardware antigo.",
+		PALETTE_ERA_64BIT,
+		[
+			["wireframe_hulk", 0.0, 0.5],
+			["z_fight",        0.0, 0.7],
+			["polygon",        0.0, 0.5],  # legado da era anterior
+			["fmv",            0.0, 0.4],
+			["null_sprite",   30.0, 0.4],
+			["bit_flip",      80.0, 0.5],
+			["memory_leak",  120.0, 0.4],
+			["compression",  150.0, 0.4],
+		],
+		"PolygonHell",
+		"Polygon Hell",
+		"Derrote Bad Sector na Era 32-bit CD"
 	))
 
 
@@ -111,9 +163,15 @@ func all_ids() -> Array[String]:
 
 
 func is_unlocked(id: String) -> bool:
-	# 8-bit foi removido como opção jogável; 16-bit é a única era ativa e sempre liberada.
-	if id == "era_16bit":
+	# Eras da progressão sempre liberadas (avançam automaticamente).
+	if id == "era_16bit" or id == "era_32bit_cd" or id == "era_64bit":
 		return true
 	if id == "era_8bit":
 		return true
 	return false
+
+
+## Lista ordenada de eras que compõem uma run completa.
+## Agora 3 fases: 16-bit → 32-bit CD → 64-bit (boss final Polygon Hell).
+func run_progression() -> Array[String]:
+	return ["era_16bit", "era_32bit_cd", "era_64bit"]

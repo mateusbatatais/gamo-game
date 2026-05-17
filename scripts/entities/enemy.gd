@@ -21,6 +21,7 @@ extends CharacterBody2D
 var current_hp: int
 var sprite: AnimatedSprite2D
 var _flash_timer: float = 0.0
+var _dying_anim: bool = false
 
 
 func _ready() -> void:
@@ -143,10 +144,24 @@ func _spawn_damage_number(amount: int, is_crit: bool) -> void:
 
 
 func _die() -> void:
+	if _dying_anim:
+		return
+	_dying_anim = true
 	Audio.play(Audio.Sfx.ENEMY_DIE)
 	GameState.register_kill()
 	GameState.grant_tokens(token_value)
 	EventBus.enemy_killed.emit(self, xp_value)
+	# Desativa colisão pra não tomar mais hits durante a anim.
+	collision_layer = 0
+	collision_mask = 0
+	set_physics_process(false)
+	# Sink animation: sprite encolhe + escurece em ~120ms antes de explodir.
+	if sprite != null:
+		var tween := sprite.create_tween().set_parallel(true)
+		tween.tween_property(sprite, "scale", sprite.scale * 0.35, 0.12)
+		tween.tween_property(sprite, "modulate", Color(0.4, 0.1, 0.1, 0.5), 0.12)
+	# Aguarda a anim terminar antes da explosão + drops + free.
+	await get_tree().create_timer(0.11, true).timeout
 	_spawn_death_particles()
 	_drop_xp_gem()
 	_maybe_drop_health()

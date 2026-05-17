@@ -5,8 +5,8 @@ extends Node
 
 const BASE_SPAWN_INTERVAL := 1.4
 const MIN_SPAWN_INTERVAL := 0.32
-# Curva de dificuldade alinhada com o novo tempo total de boss (360s).
-const DIFFICULTY_RAMP_TIME := 360.0
+# Curva de dificuldade comprimida pra cada fase de 3 min (180s).
+const DIFFICULTY_RAMP_TIME := 180.0
 
 class SpawnEntry:
 	var type_id: String
@@ -34,6 +34,22 @@ func _ready() -> void:
 	if _arena_container == null:
 		_arena_container = get_parent()
 	_setup_entries()
+
+
+## Re-popula a pool de inimigos com base na era atual do GameState e
+## reseta o timer de spawn. Chamado pelo Arena ao avançar de fase.
+## Em fases avançadas (stage_index > 0) começa com a curva de dificuldade
+## avançada — player já está poderoso, era nova precisa ser intensa de cara.
+func reset_for_new_stage() -> void:
+	_spawn_timer = 0.0
+	enabled = true
+	_setup_entries()
+	# Fase 2 em diante começa "pré-aquecida" — pula 30% da curva pra spawnar
+	# mais inimigos e os de unlock_time mais tarde aparecerem cedo.
+	if GameState.stage_index > 0:
+		_time_alive = DIFFICULTY_RAMP_TIME * 0.3
+	else:
+		_time_alive = 0.0
 
 
 func _setup_entries() -> void:
@@ -130,5 +146,17 @@ func _instantiate(type_id: String) -> Enemy:
 			return SpriteLimit.new()
 		"bit_flip":
 			return BitFlip.new()
+		# Era 32-bit CD
+		"polygon":
+			return Polygon.new()
+		"scratch":
+			return Scratch.new()
+		"fmv":
+			return Fmv.new()
+		# Era 64-bit
+		"wireframe_hulk":
+			return WireframeHulk.new()
+		"z_fight":
+			return ZFight.new()
 	push_warning("Tipo de inimigo desconhecido: %s" % type_id)
 	return Artifact.new()

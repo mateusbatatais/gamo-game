@@ -44,6 +44,8 @@ UpgradeRegistry="*res://scripts/autoload/upgrade_registry.gd"
 AchievementRegistry="*res://scripts/autoload/achievement_registry.gd"
 SkinRegistry="*res://scripts/autoload/skin_registry.gd"
 CodexRegistry="*res://scripts/autoload/codex_registry.gd"
+DialogController="*res://scripts/autoload/dialog_controller.gd"
+BoonSystem="*res://scripts/autoload/boon_system.gd"
 
 [display]
 

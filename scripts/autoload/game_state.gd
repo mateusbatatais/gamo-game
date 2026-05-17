@@ -34,6 +34,11 @@ var run_time: float = 0.0
 var run_kills: int = 0
 var run_active: bool = false
 var last_run_victory: bool = false
+# Progressão de fases dentro de UMA run.
+# stages_in_run = lista ordenada de era_ids (definida por EraRegistry.run_progression()).
+# stage_index = índice atual (0 = primeira fase).
+var stages_in_run: Array[String] = []
+var stage_index: int = 0
 
 # Estados temporários (controlados por power-ups e similares)
 var enemies_frozen_until: float = -1.0
@@ -70,8 +75,35 @@ func start_run() -> void:
 	combo_last_kill_at = -1.0
 	run_damage_dealt = 0
 	run_tokens_earned = 0
+	# Inicializa progressão de fases pra esta run.
+	stages_in_run = EraRegistry.run_progression()
+	stage_index = 0
+	selected_era_id = stages_in_run[0]
 	total_runs += 1
 	EventBus.run_started.emit()
+
+
+## Avança pra próxima fase da run. Retorna true se avançou, false se era a última.
+## Reseta run_time e configura selected_era_id pra próxima.
+func advance_to_next_stage() -> bool:
+	if stage_index >= stages_in_run.size() - 1:
+		return false
+	stage_index += 1
+	selected_era_id = stages_in_run[stage_index]
+	run_time = 0.0
+	combo = 0
+	combo_last_kill_at = -1.0
+	return true
+
+
+## True se a fase atual é a última da run.
+func is_last_stage() -> bool:
+	return stage_index >= stages_in_run.size() - 1
+
+
+## Texto "Fase X/Y" pra UI.
+func stage_label() -> String:
+	return "FASE %d/%d" % [stage_index + 1, stages_in_run.size()]
 
 
 func end_run(victory: bool) -> void:

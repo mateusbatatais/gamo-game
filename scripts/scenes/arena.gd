@@ -3,11 +3,11 @@
 extends Node2D
 
 const ARENA_RECT := Rect2(Vector2.ZERO, Vector2(640, 360))
-# Boss spawn ampliado para 6 minutos pra dar tempo de ver toda a curva de progressão.
-const BOSS_WARNING_TIME := 350.0  # 5:50
-const BOSS_SPAWN_TIME := 360.0    # 6:00
-# 3 mini-bosses cronometrados a cada ~1:30, distribuindo os picos de tensão.
-const MINI_BOSS_TIMES := [90.0, 210.0, 330.0]
+# Cada fase agora dura 3 minutos. Run completa = 2 fases × 3 min = 6 min total.
+const BOSS_WARNING_TIME := 170.0  # 2:50
+const BOSS_SPAWN_TIME := 180.0    # 3:00
+# 2 mini-bosses por fase pra dar picos de tensão.
+const MINI_BOSS_TIMES := [60.0, 130.0]
 const FREEZE_DURATION := 3.0
 
 var _player: Player
@@ -25,8 +25,14 @@ var _camera: Camera2D
 var _shake_remaining: float = 0.0
 var _shake_amplitude: float = 0.0
 var _shake_initial_duration: float = 0.25
-var _mini_boss_spawned: Array[bool] = [false, false, false]
+var _mini_boss_spawned: Array[bool] = [false, false]
 var _intro_in_progress: bool = false
+
+# Eventos ambientais: dispara um aleatório a cada ENV_EVENT_INTERVAL (com jitter).
+const ENV_EVENT_INTERVAL_MIN := 30.0
+const ENV_EVENT_INTERVAL_MAX := 50.0
+var _env_event_timer: float = 0.0
+var _env_event_active: bool = false
 
 
 func _ready() -> void:
@@ -41,7 +47,7 @@ func _ready() -> void:
 	_build_camera()
 	_connect_signals()
 	GameState.start_run()
-	Music.play_normal()
+	Music.play_normal_for_era(GameState.selected_era_id)
 
 
 func _build_camera() -> void:
@@ -120,6 +126,8 @@ func _spawn_player() -> void:
 	_entity_root.add_child(_player)
 	# Aplica upgrades persistentes da hub antes do primeiro cartucho.
 	UpgradeRegistry.apply_to_player(_player)
+	# Vincula o BoonSystem ao player (precisa estar após upgrades pra ter snapshots corretos).
+	BoonSystem.bind_player(_player)
 	_player.equip_cartridge(spirit.starting_cartridge)
 
 
@@ -209,11 +217,44 @@ func _process(delta: float) -> void:
 	if _ended:
 		return
 	_check_mini_boss_spawn()
+	_check_environmental_events(delta)
 	if not _boss_warning_shown and GameState.run_time >= BOSS_WARNING_TIME:
 		_boss_warning_shown = true
 		EventBus.boss_warning.emit()
 	if not _boss_spawned and GameState.run_time >= BOSS_SPAWN_TIME:
 		_spawn_boss()
+
+
+## Decrementa o timer de eventos ambientais e dispara um aleatório quando zerar.
+## Não dispara durante o boss ou nos primeiros/últimos 20s da fase.
+func _check_environmental_events(delta: float) -> void:
+	if _boss_spawned or _env_event_active:
+		return
+	if GameState.run_time < 20.0:
+		return
+	if GameState.run_time > BOSS_SPAWN_TIME - 25.0:
+		return
+	_env_event_timer -= delta
+	if _env_event_timer <= 0.0:
+		_env_event_timer = randf_range(ENV_EVENT_INTERVAL_MIN, ENV_EVENT_INTERVAL_MAX)
+		_spawn_environmental_event()
+
+
+func _spawn_environmental_event() -> void:
+	var event := EnvironmentalEvent.new()
+	event.kind = randi() % EnvironmentalEvent.Kind.size()
+	_entity_root.add_child(event)
+	_env_event_active = true
+	# Dialog avisando o player
+	var names := {
+		EnvironmentalEvent.Kind.DATA_STORM: ["DATA STORM", Color("#ff5252")],
+		EnvironmentalEvent.Kind.BIT_RAIN: ["BIT RAIN", Color("#69f0ae")],
+		EnvironmentalEvent.Kind.GLITCH_WAVE: ["GLITCH WAVE", Color("#e040fb")],
+	}
+	var data: Array = names[event.kind]
+	_spawn_dialog("ALERTA", "%s detectado!" % data[0], data[1] as Color)
+	# Quando o evento terminar, libera pra spawnar outro.
+	event.tree_exited.connect(func(): _env_event_active = false)
 
 
 func _check_mini_boss_spawn() -> void:
@@ -287,8 +328,12 @@ func _instantiate_boss(class_id: String) -> Enemy:
 			return CorruptionV1.new()
 		"Fragmentation":
 			return Fragmentation.new()
+		"BadSector":
+			return BadSector.new()
+		"PolygonHell":
+			return PolygonHell.new()
 	push_warning("Boss desconhecido: %s" % class_id)
-	return CorruptionV1.new()
+	return Fragmentation.new()
 
 
 func _on_player_died() -> void:
@@ -309,7 +354,75 @@ func _on_boss_defeated() -> void:
 		Color("#9bbc0f")
 	)
 	await get_tree().create_timer(2.0, true, false, true).timeout
-	_end_run(true)
+	# Se for a última fase da run, roda a cinemática de vitória final.
+	if GameState.is_last_stage():
+		await _play_victory_sequence()
+		_end_run(true)
+	else:
+		_show_stage_cleared()
+
+
+## Roda a sequência cinemática de vitória ao derrotar o boss final da run.
+func _play_victory_sequence() -> void:
+	var center := ARENA_RECT.get_center()
+	if _player != null:
+		center = _player.global_position
+	var vs := VictorySequence.new()
+	_entity_root.add_child(vs)
+	vs.start(center)
+	await vs.finished
+	vs.queue_free()
+
+
+## Mostra o overlay "STAGE CLEARED" e aguarda o player avançar pra próxima fase.
+func _show_stage_cleared() -> void:
+	var cleared := StageCleared.new()
+	add_child(cleared)
+	var next_era_id: String = GameState.stages_in_run[GameState.stage_index + 1]
+	var next_def: EraRegistry.EraDef = EraRegistry.get_def(next_era_id)
+	var next_name: String = next_def.display_name if next_def != null else "?"
+	var stats := {
+		"time": GameState.run_time,
+		"kills": GameState.run_kills,
+		"max_combo": GameState.last_run_max_combo,
+		"tokens": GameState.run_tokens_earned,
+	}
+	cleared.show_for_stage(GameState.stage_label(), next_name, stats)
+	await cleared.advance_requested
+	cleared.queue_free()
+	_advance_stage()
+
+
+## Avança a arena pra próxima fase: limpa tudo, configura nova era, recomeça spawn.
+func _advance_stage() -> void:
+	if not GameState.advance_to_next_stage():
+		_end_run(true)
+		return
+	# Limpa o que sobrou da fase anterior.
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e is Enemy:
+			(e as Enemy).queue_free()
+	for node in _entity_root.get_children():
+		if node is EnemyProjectile or node is XpGem or node is HealthPickup or node is PowerUp:
+			node.queue_free()
+	# Reset estado da fase.
+	_boss_warning_shown = false
+	_boss_spawned = false
+	_mini_boss_spawned[0] = false
+	_mini_boss_spawned[1] = false
+	# Troca paleta do background pra nova era.
+	if _bg_canvas != null and _bg_canvas.has_method("set_era"):
+		_bg_canvas.call("set_era", GameState.selected_era_id)
+	# Reseta spawner com pool de inimigos da nova era.
+	if _spawner != null:
+		_spawner.reset_for_new_stage()
+	# HUD atualiza barra de progresso (run_time foi resetado em GameState).
+	_spawn_dialog(
+		"GAMO.SYS",
+		"Atravessando pra %s..." % EraRegistry.get_def(GameState.selected_era_id).display_name,
+		Color("#00e5ff")
+	)
+	Music.play_normal_for_era(GameState.selected_era_id)  # nova era, nova track
 
 
 func _boss_reward_cartridge_for(era_id: String) -> String:
@@ -318,6 +431,10 @@ func _boss_reward_cartridge_for(era_id: String) -> String:
 			return "reset_button"
 		"era_16bit":
 			return "region_free"
+		"era_32bit_cd":
+			return "heat_seeker"  # cartucho da era CD
+		"era_64bit":
+			return "reflector"  # cartucho legendary defensivo da era poligonal
 	return ""
 
 
@@ -327,7 +444,9 @@ func _end_run(victory: bool) -> void:
 	_ended = true
 	GameState.end_run(victory)
 	Music.stop()
-	await get_tree().create_timer(1.5, true, false, true).timeout
+	# Pausa curta — vitória/derrota já tiveram suas cinemáticas próprias
+	# (boss death slow-mo / player death sequence).
+	await get_tree().create_timer(0.5, true, false, true).timeout
 	SceneRouter.go_to_game_over()
 
 

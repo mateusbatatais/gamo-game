@@ -73,11 +73,34 @@ func _register_all() -> void:
 		"Alterna entre ON (vulnerável) e OFF (imune). Mira bem os hits.",
 		Sprites.BIT_FLIP_IDLE, Sprites.PALETTE_BIT_FLIP_ON))
 	_add(CodexEntry.new("mini_boss", "Sentinel", "MINIBOSS",
-		"Mini-boss que aparece em waves. HP alto, dispara ring de projéteis. Dropa health + power-up.",
+		"Mini-boss que aparece em waves. HP alto, dispara ring de projéteis. Dropa health + power-up + boon.",
 		Sprites.MINIBOSS_IDLE, Sprites.PALETTE_MINIBOSS))
 	_add(CodexEntry.new("fragmentation", "Fragmentation", "BOSS",
-		"Boss final da Era 16-bit. 4 fases: Whole, Cracked, Shattered, Final. Dropa o lendário Region Free.",
+		"Boss da Era 16-bit. 4 fases: Whole, Cracked, Shattered, Final. Dropa o lendário Region Free.",
 		Sprites.FRAGMENTATION_IDLE, Sprites.PALETTE_FRAGMENTATION))
+	# Era 32-bit CD
+	_add(CodexEntry.new("polygon", "Polygon", "ENEMY",
+		"Triângulo pseudo-3D rápido que persegue rotacionando. Frágil, mas em massa machuca.",
+		Sprites.POLYGON_IDLE, Sprites.PALETTE_POLYGON))
+	_add(CodexEntry.new("scratch", "Scratch", "ENEMY",
+		"Risco horizontal de CD arranhado. Anda só na horizontal em alta velocidade.",
+		Sprites.SCRATCH_IDLE, Sprites.PALETTE_SCRATCH))
+	_add(CodexEntry.new("fmv", "FMV Burst", "ENEMY",
+		"Bloco de vídeo full-motion corrompido. 'Buffera' periodicamente e dispara cruz cardinal.",
+		Sprites.FMV_IDLE, Sprites.PALETTE_FMV))
+	_add(CodexEntry.new("bad_sector", "Bad Sector", "BOSS",
+		"Boss da Era 32-bit CD. Setor corrompido orbitando, lasers radiais e teleport skip.",
+		Sprites.BAD_SECTOR_IDLE, Sprites.PALETTE_BAD_SECTOR))
+	# Era 64-bit
+	_add(CodexEntry.new("wireframe_hulk", "Wireframe Hulk", "ENEMY",
+		"Tank pseudo-3D pesado. HP alto, dano de contato brutal, movimento lento.",
+		Sprites.WIREFRAME_IDLE, Sprites.PALETTE_WIREFRAME))
+	_add(CodexEntry.new("z_fight", "Z-Fight", "ENEMY",
+		"Sprite com flicker entre 2 frames distintos. Move-se em zigue-zague de z-fighting.",
+		Sprites.ZFIGHT_IDLE, Sprites.PALETTE_ZFIGHT))
+	_add(CodexEntry.new("polygon_hell", "Polygon Hell", "BOSS",
+		"Boss FINAL. Pirâmide corrompida rotacionando. Espirais, volleys triangulares e convoca Hulks.",
+		Sprites.POLYGON_HELL_IDLE, Sprites.PALETTE_POLYGON_HELL))
 
 
 func _add(entry: CodexEntry) -> void:

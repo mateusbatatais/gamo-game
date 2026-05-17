@@ -34,6 +34,13 @@ signal mini_boss_spawned
 signal tokens_changed(total: int)
 signal achievement_unlocked(id: String)
 
+# --- Boons temporários ---
+signal boons_changed(active_list: Array)
+
+# --- Eventos ambientais ---
+signal environmental_event_started(kind: int)
+signal environmental_event_ended(kind: int)
+
 # --- Boss ---
 signal boss_warning  # antes do boss aparecer
 signal boss_spawned(boss: Node2D)

@@ -27,6 +27,7 @@ func _ready() -> void:
 	custom_minimum_size = Vector2(640, 360)
 	_build()
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	Music.play_menu()
 	_play_intro()
 
 

@@ -160,6 +160,31 @@ func _register_all() -> void:
 		Rarity.LEGENDARY,
 		"res://scripts/cartridges/vortex_field.gd"
 	))
+	# --- Cartuchos Era 32-bit CD (Fase 2 do roadmap) ---
+	_add(CartridgeDef.new(
+		"heat_seeker",
+		"Heat Seeker",
+		"Mísseis que perseguem o inimigo mais próximo.",
+		CartridgeType.WEAPON,
+		Rarity.SPECIAL,
+		"res://scripts/cartridges/heat_seeker.gd"
+	))
+	_add(CartridgeDef.new(
+		"boomerang",
+		"Boomerang",
+		"Projétil que atravessa inimigos, volta e acerta de novo.",
+		CartridgeType.WEAPON,
+		Rarity.RARE,
+		"res://scripts/cartridges/boomerang.gd"
+	))
+	_add(CartridgeDef.new(
+		"reflector",
+		"Reflector",
+		"Escudos orbitais que destroem projéteis inimigos.",
+		CartridgeType.WEAPON,
+		Rarity.SPECIAL,
+		"res://scripts/cartridges/reflector.gd"
+	))
 
 
 func _register_evolutions() -> void:
