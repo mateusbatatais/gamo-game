@@ -39,7 +39,7 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 
 
- func _find_target() -> Enemy:
+func _find_target() -> Enemy:
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var nearest: Enemy = null
 	var nearest_d: float = seek_radius
