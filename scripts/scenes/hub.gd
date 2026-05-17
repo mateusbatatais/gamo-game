@@ -202,11 +202,16 @@ func _make_spirit_card(spirit_id: String, card_size: Vector2) -> Button:
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	btn.add_child(name_label)
 
-	# Sprite preview com paleta da skin ativa
+	# Sprite preview com paleta da skin ativa.
+	# Se a skin ativa for um personagem completo (Hacker, Chubby, Wizard), usa
+	# os frames dela; senão fallback pro sprite do spirit.
 	var preview_palette: Dictionary = SkinRegistry.active_palette()
+	var preview_frames: Array = SkinRegistry.active_sprite_frames()
+	if preview_frames.is_empty():
+		preview_frames = def.sprite_frames
 	var sprite := Sprite2D.new()
 	sprite.texture = PixelArt.make_sprite(
-		PackedStringArray(def.sprite_frames[0]),
+		PackedStringArray(preview_frames[0]),
 		preview_palette if unlocked else _grayscale(preview_palette)
 	)
 	sprite.centered = true
@@ -295,17 +300,19 @@ func _make_skin_thumb(skin_id: String, preview_sprite: Sprite2D, name_label: Lab
 	thumb.add_theme_stylebox_override("hover", sb_focus)
 	thumb.add_theme_stylebox_override("focus", sb_focus)
 
-	# Mini-sprite (preview da skin) ou cadeado se bloqueada
+	# Mini-sprite (preview da skin) — usa frames específicos da skin se for
+	# personagem completo (Hacker, Chubby, Wizard); senão GAMO default.
+	var thumb_frames: Array = SkinRegistry.sprite_frames_of(skin_id)
 	var mini := Sprite2D.new()
 	if unlocked:
 		mini.texture = PixelArt.make_sprite(
-			PackedStringArray(Sprites.GAMO_T1_IDLE[0]),
+			PackedStringArray(thumb_frames[0]),
 			def.palette
 		)
 		mini.scale = Vector2(1.0, 1.0)
 	else:
 		mini.texture = PixelArt.make_sprite(
-			PackedStringArray(Sprites.GAMO_T1_IDLE[0]),
+			PackedStringArray(thumb_frames[0]),
 			_grayscale(def.palette)
 		)
 		mini.scale = Vector2(1.0, 1.0)
@@ -329,9 +336,12 @@ func _on_skin_picked(skin_id: String, preview_sprite: Sprite2D, _name_label: Lab
 	GameState.current_skin_id = skin_id
 	GameState.save_progress()
 	Audio.play(Audio.Sfx.UI_SELECT)
-	# Atualiza preview com nova paleta
+	# Atualiza preview com sprite + paleta da nova skin.
+	var new_frames: Array = SkinRegistry.active_sprite_frames()
+	if new_frames.is_empty():
+		new_frames = SpiritRegistry.get_def("pixel").sprite_frames
 	preview_sprite.texture = PixelArt.make_sprite(
-		PackedStringArray(SpiritRegistry.get_def("pixel").sprite_frames[0]),
+		PackedStringArray(new_frames[0]),
 		SkinRegistry.active_palette()
 	)
 	# Refaz o card pra atualizar borda do thumb ativo + info.

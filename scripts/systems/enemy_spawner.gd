@@ -88,13 +88,43 @@ func _spawn_wave() -> void:
 		group_size = max(group_size, 3 + randi() % 3)
 
 	var origin := ArenaBounds.random_spawn_point(24.0)
+	# Pattern por era — 16-bit clump caótico, 32-bit linha, 64-bit círculo.
+	var offsets: Array[Vector2] = _spawn_offsets(group_size, origin)
 	for i in group_size:
 		var enemy: Enemy = _instantiate(picked_id)
 		if enemy == null:
 			continue
-		var offset := Vector2(randf_range(-20.0, 20.0), randf_range(-20.0, 20.0))
-		enemy.global_position = origin + offset
+		enemy.global_position = origin + offsets[i]
 		_arena_container.add_child(enemy)
+
+
+## Retorna lista de offsets relativos ao origin, escolhidos por padrão da era.
+func _spawn_offsets(count: int, origin: Vector2) -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	match GameState.selected_era_id:
+		"era_32bit_cd":
+			# Formação linear: horizontal ou vertical (sorteia), espaçamento 22px.
+			var horizontal: bool = randf() < 0.5
+			var spacing: float = 22.0
+			var center_idx: float = float(count - 1) * 0.5
+			for i in count:
+				var d: float = (float(i) - center_idx) * spacing
+				if horizontal:
+					out.append(Vector2(d, randf_range(-4.0, 4.0)))
+				else:
+					out.append(Vector2(randf_range(-4.0, 4.0), d))
+		"era_64bit":
+			# Formação circular: 1 no centro + resto em ring ao redor (raio 24px).
+			out.append(Vector2.ZERO)
+			var ring_count: int = count - 1
+			for i in ring_count:
+				var angle: float = TAU * float(i) / float(max(1, ring_count))
+				out.append(Vector2(cos(angle), sin(angle)) * 24.0)
+		_:
+			# Era 16-bit (e fallback): clump aleatório (padrão original).
+			for i in count:
+				out.append(Vector2(randf_range(-20.0, 20.0), randf_range(-20.0, 20.0)))
+	return out
 
 
 func _wave_size() -> int:

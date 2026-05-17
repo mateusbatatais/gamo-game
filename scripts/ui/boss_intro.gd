@@ -18,9 +18,12 @@ var _bg: ColorRect
 var _title: Label
 var _subtitle: TypewriterLabel
 var _subtitle_typed: bool = false
+var _subtitle_text: String = "- CHEFE FINAL -"
 var _camera: Camera2D
 var _camera_focus: Vector2 = Vector2.ZERO
 var _initial_zoom: Vector2 = Vector2.ONE
+var _stripe_top: ColorRect
+var _stripe_bottom: ColorRect
 
 
 func _ready() -> void:
@@ -72,14 +75,26 @@ func _build() -> void:
 
 ## Configura a intro com o nome do boss, posição alvo da câmera (zoom-in) e
 ## a Camera2D que será manipulada pra dar o efeito de zoom.
-func start(boss_name: String, target_pos: Vector2, camera: Camera2D) -> void:
+## subtitle_override: se passado, substitui o "- CHEFE FINAL -" default.
+## title_color: cor do título (vermelho para boss final, magenta para mini-boss).
+func start(
+	boss_name: String,
+	target_pos: Vector2,
+	camera: Camera2D,
+	subtitle_override: String = "",
+	title_color: Color = Color("#ff5252")
+) -> void:
 	_title.text = boss_name.to_upper()
 	_title.scale = Vector2(2.4, 2.4)  # começa grande, encolhe pra dar impacto
 	_title.modulate = Color(1, 1, 1, 0)
+	_title.add_theme_color_override("font_color", title_color)
+	if subtitle_override != "":
+		_subtitle_text = subtitle_override
 	_camera = camera
 	_camera_focus = target_pos
 	if _camera != null:
 		_initial_zoom = _camera.zoom
+	_spawn_warning_stripes(title_color)
 
 
 func _process(delta: float) -> void:
@@ -89,6 +104,26 @@ func _process(delta: float) -> void:
 
 	# Fundo escurece rapidamente
 	_bg.color.a = clampf(_age / 0.3, 0.0, 0.55)
+
+	# Listras de WARNING — slide-in horizontal durante zoom-in, hold, slide-out no zoom-out.
+	if _stripe_top != null and _stripe_bottom != null:
+		var stripe_t: float
+		if _age <= ZOOM_IN_TIME:
+			stripe_t = clampf(_age / ZOOM_IN_TIME, 0.0, 1.0)
+		elif _age <= ZOOM_IN_TIME + HOLD_TIME:
+			stripe_t = 1.0
+		else:
+			var out_local: float = (_age - ZOOM_IN_TIME - HOLD_TIME) / ZOOM_OUT_TIME
+			stripe_t = clampf(1.0 - out_local, 0.0, 1.0)
+		# Largura cresce do canto pra dentro (esticando da esquerda)
+		var viewport_width: float = 640.0
+		_stripe_top.size.x = viewport_width * stripe_t
+		_stripe_bottom.size.x = viewport_width * stripe_t
+		# Pisca durante hold (efeito "alarme")
+		if _age > ZOOM_IN_TIME and _age < ZOOM_IN_TIME + HOLD_TIME:
+			var blink: float = 0.65 + 0.35 * sin(_age * 14.0)
+			_stripe_top.modulate.a = blink
+			_stripe_bottom.modulate.a = blink
 
 	# Fase de zoom-in da câmera + zoom do título descendo de 2.4 → 1.0
 	if _age <= ZOOM_IN_TIME:
@@ -108,7 +143,7 @@ func _process(delta: float) -> void:
 		_subtitle.modulate.a = clampf(hold_t * 2.5, 0.0, 1.0)
 		if not _subtitle_typed:
 			_subtitle_typed = true
-			_subtitle.type_text("- CHEFE FINAL -", 0.05)
+			_subtitle.type_text(_subtitle_text, 0.05)
 	else:
 		# Zoom-out: câmera volta + título e bg saem
 		var out_t: float = (_age - ZOOM_IN_TIME - HOLD_TIME) / ZOOM_OUT_TIME
@@ -136,6 +171,28 @@ func _camera_offset_for_focus() -> Vector2:
 	# Aplica metade do offset pra não sair do enquadramento (mantém boss visível
 	# mas câmera ainda quase centralizada).
 	return (_camera_focus - _camera.position) * 0.4
+
+
+## Cria as listras superior e inferior tipo "WARNING" tarja (similar ao
+## metal gear alert). Slidam de fora pra dentro durante o zoom-in.
+func _spawn_warning_stripes(color: Color) -> void:
+	_stripe_top = ColorRect.new()
+	_stripe_top.color = Color(color.r, color.g, color.b, 0.92)
+	_stripe_top.anchor_right = 1.0
+	_stripe_top.position = Vector2(0, -16)  # começa fora da tela (acima)
+	_stripe_top.size = Vector2(0, 16)  # height fixa, width vai esticar
+	_stripe_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_stripe_top)
+
+	_stripe_bottom = ColorRect.new()
+	_stripe_bottom.color = Color(color.r, color.g, color.b, 0.92)
+	_stripe_bottom.anchor_right = 1.0
+	_stripe_bottom.anchor_top = 1.0
+	_stripe_bottom.anchor_bottom = 1.0
+	_stripe_bottom.position = Vector2(0, 0)  # começa fora da tela (abaixo)
+	_stripe_bottom.size = Vector2(0, 16)
+	_stripe_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_stripe_bottom)
 
 
 func _ease_out_cubic(x: float) -> float:

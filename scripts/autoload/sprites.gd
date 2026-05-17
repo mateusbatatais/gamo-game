@@ -15,6 +15,43 @@ const PALETTE_GAMO := {
 	"-": Color("#000a1f"),  # sombra escura
 }
 
+# HACKER — mulher de moletom com óculos + cabelo preso (bun)
+const PALETTE_HACKER := {
+	"#": Color("#6d4c41"),  # cabelo castanho
+	"=": Color("#3f51b5"),  # moletom azul-roxo
+	"L": Color("#7986cb"),  # highlight do moletom
+	"o": Color("#26c6da"),  # lentes do óculos (ciano)
+	"O": Color("#ffffff"),  # luz da lente
+	"x": Color("#ffd54f"),  # fivela/zipper do moletom (amarelo)
+	"-": Color("#000000"),  # armação dos óculos (preto)
+	"F": Color("#f5d0a0"),  # face/pele (claro)
+}
+
+# GORDINHO — gamer retrô, camiseta vermelha, calção, corpo redondo
+const PALETTE_CHUBBY := {
+	"#": Color("#ef5350"),  # camiseta vermelha
+	"=": Color("#5d4037"),  # calção marrom
+	"L": Color("#ffab91"),  # highlight rosa-pele
+	"o": Color("#212121"),  # olhos (preto pequeno)
+	"O": Color("#ffffff"),  # branco do olho
+	"x": Color("#ffeb3b"),  # logo retro no peito (amarelo)
+	"-": Color("#1a0a05"),  # sombra escura
+	"F": Color("#ffccbc"),  # pele rosa-clara
+	"H": Color("#5d2906"),  # cabelo tufado castanho
+}
+
+# MAGO — chapéu pontiagudo + manto roxo + barba branca
+const PALETTE_WIZARD := {
+	"#": Color("#3a2566"),  # chapéu e manto roxo escuro
+	"=": Color("#5e35b1"),  # manto roxo claro
+	"L": Color("#b39ddb"),  # highlight roxo claro
+	"o": Color("#ffd54f"),  # estrela do chapéu (amarelo)
+	"O": Color("#ffffff"),  # olhos brilhantes
+	"x": Color("#fff8e1"),  # barba branca
+	"-": Color("#0a0014"),  # sombra preta
+	"F": Color("#ffe0b2"),  # face/pele
+}
+
 # Mantida pra compatibilidade com Echo (inimigo que mimica o sprite antigo do player).
 const PALETTE_PIXEL := {
 	"#": Color("#2a2a2a"),
@@ -501,6 +538,144 @@ const GAMO_T2_IDLE: Array = [
 
 # GAMO Tier 3 (18x22) — armadura pesada com crown helmet, peito blindado,
 # braços externos reforçados e pernas com proteção.
+# HACKER (12x18) — mulher de moletom com óculos e bun no topo.
+# # = cabelo, = = moletom, L = highlight moletom, F = face/pele,
+# - = armação dos óculos, o/O = lente, x = zipper.
+const HACKER_IDLE: Array = [
+	[
+		".....##.....",
+		"....####....",
+		"...######...",
+		"..##FFFF##..",
+		"..#-FFFF-#..",
+		"..#oOFFOo#..",
+		"..##FFFF##..",
+		"...##FF##...",
+		"...======...",
+		"..LL====LL..",
+		"..==xxxx==..",
+		"..========..",
+		"..========..",
+		"...======...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+	[
+		".....##.....",
+		"....####....",
+		"...######...",
+		"..##FFFF##..",
+		"..#-FFFF-#..",
+		"..#o-FF-o#..",
+		"..##FFFF##..",
+		"...##FF##...",
+		"...======...",
+		"..LL====LL..",
+		"..==oooo==..",
+		"..========..",
+		"..========..",
+		"...======...",
+		"...##..##...",
+		"...##..##...",
+		"...##..##...",
+		"...==..==...",
+	],
+]
+
+# GORDINHO (12x18) — gamer retrô, corpo redondo, tufo de cabelo, camiseta com logo.
+# # = camiseta, = = calção, L = highlight, F = pele,
+# H = cabelo, o/O = olhos, x = logo no peito.
+const CHUBBY_IDLE: Array = [
+	[
+		"....HHHH....",
+		"...HHFFHH...",
+		"..FFFFFFFF..",
+		"..FOoFFoOF..",
+		"..FFFFFFFF..",
+		"..FFF==FFF..",
+		"..LFFFFFFL..",
+		".##########.",
+		"############",
+		"###==xx==###",
+		"############",
+		"############",
+		".##########.",
+		"..========..",
+		"..==....==..",
+		"..==....==..",
+		"..==....==..",
+		"..--....--..",
+	],
+	[
+		"....HHHH....",
+		"...HHFFHH...",
+		"..FFFFFFFF..",
+		"..FOoFFoOF..",
+		"..FFFFFFFF..",
+		"..FFF==FFF..",
+		"..LFFFFFFL..",
+		".##########.",
+		"############",
+		"###==oo==###",
+		"############",
+		"############",
+		".##########.",
+		"..========..",
+		"..==....==..",
+		"..==....==..",
+		"..==....==..",
+		"..--....--..",
+	],
+]
+
+# MAGO (12x18) — chapéu pontiagudo + manto longo + barba branca.
+# # = chapéu/manto escuro, = = manto claro, L = highlight, F = face,
+# x = barba branca, o = estrela do chapéu, O = olhos brilhantes.
+const WIZARD_IDLE: Array = [
+	[
+		".....##.....",
+		"....####....",
+		"...#oo##....",
+		"..##oo###...",
+		".##########.",
+		"...FFFFFF...",
+		"..FFOFFOFF..",
+		"..xFFFFFFx..",
+		"..xxxxxxxx..",
+		"...========.",
+		"..==LLLLL==.",
+		"..========..",
+		"..==xxxx==..",
+		"..========..",
+		"..========..",
+		"..==LLLL==..",
+		"..========..",
+		"..==....==..",
+	],
+	[
+		".....##.....",
+		"....####....",
+		"...#oo##....",
+		"..##oo###...",
+		".##########.",
+		"...FFFFFF...",
+		"..FFOFFOFF..",
+		"..xFFFFFFx..",
+		"..xxxxxxxx..",
+		"...========.",
+		"..==LLLLL==.",
+		"..========..",
+		"..==oooo==..",
+		"..========..",
+		"..========..",
+		"..==LLLL==..",
+		"..========..",
+		"..==....==..",
+	],
+]
+
 const GAMO_T3_IDLE: Array = [
 	[
 		".......####.......",

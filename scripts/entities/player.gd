@@ -116,9 +116,15 @@ func _build_sprite() -> void:
 	# não estiver no registry por algum motivo.
 	var skin_palette: Dictionary = SkinRegistry.active_palette()
 	spirit_palette = skin_palette
+	# Skins de personagem (Hacker, Chubby, Wizard) sobrescrevem os frames do GAMO
+	# pra renderizar com silhueta diferente. Skins palette-only continuam usando
+	# spirit_frames do spirit padrão.
+	var frames_to_use: Array = SkinRegistry.active_sprite_frames()
+	if frames_to_use.is_empty():
+		frames_to_use = spirit_frames
 	sprite = AnimatedSprite2D.new()
 	sprite.sprite_frames = Sprites.make_animation(
-		spirit_frames, spirit_palette, 3.0
+		frames_to_use, spirit_palette, 3.0
 	)
 	sprite.play("default")
 	sprite.centered = true
@@ -389,6 +395,12 @@ func _find_secondary_aim_dir(primary_enemy: Enemy, primary_dir: Vector2) -> Vect
 ## Reage ao signal player_leveled_up trocando a sprite do GAMO quando cruza
 ## um limiar de evolução (sem armadura → leve → pesada).
 func _on_level_up_visual(new_level: int) -> void:
+	# Personagens alternativos (Hacker, Chubby, Wizard) mantêm sua silhueta
+	# em todos os níveis — não viram robô armado no level up.
+	var skin_frames: Array = SkinRegistry.active_sprite_frames()
+	if not skin_frames.is_empty() and skin_frames != Sprites.GAMO_T1_IDLE:
+		return
+
 	var target_tier := 1
 	if new_level >= EVOLUTION_THRESHOLDS[1]:
 		target_tier = 3

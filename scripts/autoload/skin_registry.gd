@@ -12,6 +12,10 @@ class SkinDef:
 	var auto_unlock_check: Callable
 	## Texto explicando como desbloquear (mostrado em skins bloqueadas).
 	var unlock_hint: String
+	## Sprite frames customizado. Se vazio, usa Sprites.GAMO_T1_IDLE (default).
+	## Skins de palette-only (veteran, lacrado, etc) deixam isso vazio.
+	## Skins de personagem completo (hacker, chubby, wizard) sobrescrevem.
+	var sprite_frames: Array = []
 
 	func _init(
 		p_id: String,
@@ -19,7 +23,8 @@ class SkinDef:
 		p_desc: String,
 		p_palette: Dictionary,
 		p_check: Callable,
-		p_hint: String
+		p_hint: String,
+		p_sprite_frames: Array = []
 	) -> void:
 		id = p_id
 		display_name = p_name
@@ -27,6 +32,7 @@ class SkinDef:
 		palette = p_palette
 		auto_unlock_check = p_check
 		unlock_hint = p_hint
+		sprite_frames = p_sprite_frames
 
 
 var _registry: Dictionary = {}
@@ -115,6 +121,31 @@ func _register_all() -> void:
 		func(): return GameState.konami_unlocked,
 		"Acorde o código que dorme nos clássicos."
 	))
+	# --- Personagens alternativos (sprite + paleta próprios) ---
+	_add(SkinDef.new(
+		"hacker", "Hacker",
+		"Decifradora do código corrompido. Óculos antirreflexo + moletom da gamo.",
+		Sprites.PALETTE_HACKER,
+		func(): return GameState.total_kills >= 250,
+		"Acumule 250 abates totais.",
+		Sprites.HACKER_IDLE
+	))
+	_add(SkinDef.new(
+		"chubby", "Gamer Retrô",
+		"Veterano de cartucho. Mais HP, vibe nostálgica.",
+		Sprites.PALETTE_CHUBBY,
+		func(): return GameState.total_runs >= 10,
+		"Complete 10 runs (vitória ou derrota).",
+		Sprites.CHUBBY_IDLE
+	))
+	_add(SkinDef.new(
+		"wizard", "Mago do Codex",
+		"Sussurra incantamentos em assembly. Conjura damage do nada.",
+		Sprites.PALETTE_WIZARD,
+		func(): return GameState.collected_lore_cards.size() >= 6,
+		"Colete 6 lore cards (metade do álbum).",
+		Sprites.WIZARD_IDLE
+	))
 
 
 func _add(def: SkinDef) -> void:
@@ -141,6 +172,23 @@ func active_palette() -> Dictionary:
 	if def == null:
 		return Sprites.PALETTE_GAMO
 	return def.palette
+
+
+## Retorna os sprite frames da skin ativa. Skins de palette-only retornam
+## os frames default do GAMO; skins de personagem retornam os próprios.
+func active_sprite_frames() -> Array:
+	var def: SkinDef = get_def(GameState.current_skin_id)
+	if def != null and not def.sprite_frames.is_empty():
+		return def.sprite_frames
+	return Sprites.GAMO_T1_IDLE
+
+
+## Frames de uma skin específica (usado pra preview na hub).
+func sprite_frames_of(skin_id: String) -> Array:
+	var def: SkinDef = get_def(skin_id)
+	if def != null and not def.sprite_frames.is_empty():
+		return def.sprite_frames
+	return Sprites.GAMO_T1_IDLE
 
 
 func _recheck(_a: Variant = null) -> void:

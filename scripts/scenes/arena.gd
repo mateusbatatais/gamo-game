@@ -281,19 +281,35 @@ func _check_mini_boss_spawn() -> void:
 
 
 func _spawn_mini_boss(wave_index: int = 0) -> void:
-	var mb := MiniBoss.new()
+	# Mini-boss específico por era — atualmente 3 variantes.
+	var mb: MiniBoss
+	var name_label: String
+	var accent: Color
+	var era_quote: String
+	match GameState.selected_era_id:
+		"era_32bit_cd":
+			mb = MiniBossDiscReader.new()
+			name_label = "Disc Reader"
+			accent = Color("#00e5ff")
+			era_quote = "Setor corrompido girando. Disc Reader online."
+		"era_64bit":
+			mb = MiniBossZBuffer.new()
+			name_label = "Z-Buffer"
+			accent = Color("#7e57c2")
+			era_quote = "Polígonos colidindo. Z-Buffer ativado."
+		_:
+			mb = MiniBoss.new()
+			name_label = "Sentinel"
+			accent = Color("#e040fb")
+			era_quote = "Pico de corrupção detectado. Sentinel se manifesta."
 	var origin := ArenaBounds.random_spawn_point(40.0)
 	mb.global_position = origin
 	_entity_root.add_child(mb)
 	trigger_shake(5.0, 0.35)
-	# Diálogo contextual variando por wave.
-	var quotes := [
-		"Pico de corrupção detectado. Sentinel se manifesta.",
-		"Outra anomalia. O Glitch está se adaptando.",
-		"Sentinel reforçado. Última onda antes do núcleo.",
-	]
-	var quote: String = quotes[clampi(wave_index, 0, quotes.size() - 1)]
-	_spawn_dialog("GAMO.SYS", quote, Color("#e040fb"))
+	# Quote varia ligeiramente por wave também (1ª = intro da era, 2ª = "reforçado").
+	if wave_index >= 1:
+		era_quote = "Outro %s. O Glitch está adaptando." % name_label
+	_spawn_dialog("GAMO.SYS", era_quote, accent)
 
 
 func _spawn_dialog(speaker: String, message: String, accent: Color) -> void:
@@ -321,11 +337,24 @@ func _spawn_boss() -> void:
 		return
 	var boss_pos := Vector2(ARENA_RECT.get_center().x, ARENA_RECT.position.y + 50.0)
 	boss.global_position = boss_pos
+	# Subtitle e cor variam por era pra dar identidade ao boss.
+	var boss_subtitle: String = "- CHEFE FINAL -"
+	var boss_color: Color = Color("#ff5252")
+	match GameState.selected_era_id:
+		"era_16bit":
+			boss_subtitle = "- ERA 16-BIT • BOSS -"
+			boss_color = Color("#9bbc0f")
+		"era_32bit_cd":
+			boss_subtitle = "- ERA 32-BIT CD • BOSS -"
+			boss_color = Color("#00e5ff")
+		"era_64bit":
+			boss_subtitle = "- COLAPSO POLIGONAL • CHEFE FINAL -"
+			boss_color = Color("#7e57c2")
 	# Pausa, mostra title card + zoom, espera, retoma.
 	get_tree().paused = true
 	var intro := BossIntro.new()
 	add_child(intro)
-	intro.start(era.boss_display_name, boss_pos, _camera)
+	intro.start(era.boss_display_name, boss_pos, _camera, boss_subtitle, boss_color)
 	await intro.finished
 	intro.queue_free()
 	_entity_root.add_child(boss)

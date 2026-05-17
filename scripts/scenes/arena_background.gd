@@ -64,6 +64,15 @@ var _stream_speed: Array[float] = []
 var _stream_offset: Array[float] = []
 var _stream_color: Array[Color] = []
 
+# Parallax distante — "motes" que dão profundidade sem competir com gameplay.
+# Comportamento varia por era (deriva preguiçosa na 16-bit, gira em 32-bit, vibra na 64-bit).
+const PARALLAX_MOTE_COUNT := 36
+var _mote_positions: Array[Vector2] = []
+var _mote_phases: Array[float] = []
+var _mote_sizes: Array[float] = []
+var _mote_color: Color = Color(0.4, 0.7, 0.4, 0.18)
+var _mote_drift: Vector2 = Vector2(8.0, 4.0)  ## velocidade base (sobrescrito por era)
+
 
 func _ready() -> void:
 	z_index = -100
@@ -71,6 +80,7 @@ func _ready() -> void:
 	_generate_shelf()
 	_generate_pcb()
 	_generate_glitch_atmosphere()
+	_generate_parallax_motes()
 	set_process(true)
 
 
@@ -92,6 +102,8 @@ func _apply_era_palette(era_id: String) -> void:
 			color_chip = Color("#0a0a24")
 			color_chip_pin = Color("#b388ff")
 			_show_cd_disc = true
+			_mote_color = Color(0.5, 0.85, 1.0, 0.22)  # ciano gélido
+			_mote_drift = Vector2(20.0, -6.0)          # deriva rápida horizontal (efeito leitor)
 		"era_64bit":
 			# Era 64-bit — cinza-fog poligonal + roxo escuro. Padrão de
 			# wireframe sutil no fundo (sem disco CD).
@@ -102,6 +114,8 @@ func _apply_era_palette(era_id: String) -> void:
 			color_chip = Color("#1a1a2e")
 			color_chip_pin = Color("#7e57c2")
 			_show_cd_disc = false
+			_mote_color = Color(0.9, 0.6, 1.0, 0.20)  # roxo brilhante (polígonos perdidos)
+			_mote_drift = Vector2(-4.0, 14.0)         # cai como neblina/fog
 		_:
 			# Era 16-bit (default verde-PCB).
 			color_bg_top = Color("#061508")
@@ -111,6 +125,8 @@ func _apply_era_palette(era_id: String) -> void:
 			color_chip = Color("#0a0a0a")
 			color_chip_pin = Color("#9e9e9e")
 			_show_cd_disc = false
+			_mote_color = Color(0.6, 0.95, 0.5, 0.16)  # verde-PCB suave
+			_mote_drift = Vector2(8.0, 4.0)            # deriva preguiçosa
 
 
 # === Geração estática ===
@@ -182,6 +198,21 @@ func _generate_pcb() -> void:
 		})
 
 
+## Gera o campo de "motes" — pontos minúsculos que dão sensação de
+## ambient/profundidade. Distribuídos aleatoriamente, com tamanhos variando.
+func _generate_parallax_motes() -> void:
+	var rect := ArenaBounds.get_rect()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2024
+	for i in PARALLAX_MOTE_COUNT:
+		_mote_positions.append(Vector2(
+			rng.randf_range(rect.position.x, rect.end.x),
+			rng.randf_range(rect.position.y, rect.end.y)
+		))
+		_mote_phases.append(rng.randf() * TAU)
+		_mote_sizes.append(rng.randf_range(1.0, 2.5))
+
+
 func _generate_glitch_atmosphere() -> void:
 	var rect := ArenaBounds.get_rect()
 	var rng := RandomNumberGenerator.new()
@@ -239,6 +270,18 @@ func _process(delta: float) -> void:
 	# Data streams
 	for i in _stream_offset.size():
 		_stream_offset[i] += _stream_speed[i] * delta
+	# Parallax motes — deriva contínua, wrap nas bordas. Fase pulsa pra "twinkle".
+	for i in _mote_positions.size():
+		_mote_positions[i] += _mote_drift * delta
+		_mote_phases[i] += delta * 1.6
+		if _mote_positions[i].x < rect.position.x - 4:
+			_mote_positions[i].x = rect.end.x + 4
+		elif _mote_positions[i].x > rect.end.x + 4:
+			_mote_positions[i].x = rect.position.x - 4
+		if _mote_positions[i].y < rect.position.y - 4:
+			_mote_positions[i].y = rect.end.y + 4
+		elif _mote_positions[i].y > rect.end.y + 4:
+			_mote_positions[i].y = rect.position.y - 4
 	queue_redraw()
 
 
@@ -247,6 +290,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var rect := ArenaBounds.get_rect()
 	_draw_gradient(rect)
+	_draw_parallax_motes(rect)  ## entre gradient e CD/shelf — camada mais distante
 	if _show_cd_disc:
 		_draw_cd_disc(rect)
 	_draw_shelf(rect)
@@ -254,6 +298,18 @@ func _draw() -> void:
 	_draw_glitch_layer(rect)
 	_draw_scanlines(rect)
 	_draw_vignette(rect)
+
+
+## Desenha o campo de motes. Cor e tamanho com twinkle (modulado por fase).
+func _draw_parallax_motes(_rect: Rect2) -> void:
+	for i in _mote_positions.size():
+		var pos := _mote_positions[i]
+		var size := _mote_sizes[i]
+		var twinkle: float = 0.6 + 0.4 * sin(_mote_phases[i])
+		var col := Color(_mote_color.r, _mote_color.g, _mote_color.b, _mote_color.a * twinkle)
+		# Cross pequeno (cruz de 1px) pra ficar com cara de "estrela pixel" em vez de bolinha.
+		draw_rect(Rect2(pos - Vector2(size * 0.5, 0.5), Vector2(size, 1.0)), col, true)
+		draw_rect(Rect2(pos - Vector2(0.5, size * 0.5), Vector2(1.0, size)), col, true)
 
 
 ## Desenha um disco CD gigante girando no fundo (só Era 32-bit).
