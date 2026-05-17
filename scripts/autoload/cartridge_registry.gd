@@ -235,6 +235,14 @@ func _register_all() -> void:
 		Rarity.RARE,
 		"res://scripts/cartridges/vampiric.gd"
 	))
+	_add(CartridgeDef.new(
+		"dual_wield",
+		"Dual Wield",
+		"Segunda arma na outra mao. +20% dano por nivel.",
+		CartridgeType.PASSIVE,
+		Rarity.SPECIAL,
+		"res://scripts/cartridges/dual_wield.gd"
+	))
 
 
 func _register_evolutions() -> void:

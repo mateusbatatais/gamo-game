@@ -23,7 +23,7 @@ const DASH_TRAIL_COLOR := Color("#64b5f6")
 # Tiers de evolução visual do GAMO. Trocas em level-up de acordo com EVOLUTION_THRESHOLDS:
 #   tier 1 (sem armadura) → tier 2 (armadura leve) → tier 3 (armadura pesada)
 const EVOLUTION_THRESHOLDS := [5, 10]
-const WEAPON_OFFSET := 14.0          # distância da arma ao centro do player (em px-mundo)
+const WEAPON_OFFSET := 22.0          # distância da arma ao centro do player (em px-mundo)
 const WEAPON_AIM_RADIUS := 480.0
 
 @export var max_hp: int = 100
@@ -47,6 +47,11 @@ var crit_mult: float = 2.0
 
 var sprite: AnimatedSprite2D
 var weapon_sprite: Sprite2D
+var weapon_sprite_secondary: Sprite2D = null  ## ativada pelo cartucho Dual Wield
+## Renderer dos braços (Node2D customizado, definido como inner class abaixo).
+## Tipado como Node2D em vez de _PlayerArms pra evitar forward reference no parser.
+var arms_renderer: Node2D = null
+var dual_wield_active: bool = false
 var hurtbox: Area2D
 var cartridge_root: Node
 
@@ -122,6 +127,15 @@ func _build_sprite() -> void:
 
 
 func _build_weapon_sprite() -> void:
+	# Renderizador dos braços — Node2D customizado que desenha linhas do player
+	# até a(s) arma(s). z_index 1 (igual à arma) pra ficar acima do corpo.
+	arms_renderer = _PlayerArms.new()
+	arms_renderer.z_index = 1
+	# Cor do braço = cor principal do corpo ("#"), pra parecer extensão do corpo.
+	if spirit_palette != null and spirit_palette.has("#"):
+		arms_renderer.arm_color = spirit_palette["#"]
+	add_child(arms_renderer)
+
 	weapon_sprite = Sprite2D.new()
 	weapon_sprite.texture = Sprites.weapon_blaster
 	weapon_sprite.centered = true
@@ -134,11 +148,79 @@ func _build_weapon_sprite() -> void:
 	add_child(weapon_sprite)
 
 
+## Ativa/desativa a segunda arma (cartucho Dual Wield). Visual + spawn de sprite.
+func set_dual_wield(active: bool) -> void:
+	dual_wield_active = active
+	if active and weapon_sprite_secondary == null:
+		weapon_sprite_secondary = Sprite2D.new()
+		weapon_sprite_secondary.texture = weapon_sprite.texture
+		weapon_sprite_secondary.centered = true
+		weapon_sprite_secondary.scale = weapon_sprite.scale
+		weapon_sprite_secondary.modulate = weapon_sprite.modulate
+		weapon_sprite_secondary.z_index = 1
+		add_child(weapon_sprite_secondary)
+	elif not active and weapon_sprite_secondary != null:
+		weapon_sprite_secondary.queue_free()
+		weapon_sprite_secondary = null
+
+
+## Renderizador dos braços — Node2D que desenha linhas grossas entre o player
+## (shoulder offset) e a(s) arma(s). Cor lida do palette do player no _build_weapon_sprite.
+class _PlayerArms extends Node2D:
+	var arm_color: Color = Color(0.4, 0.7, 1.0, 1.0)  ## azul claro default (visível)
+	var arm_thickness: float = 4.0  ## bem visível em cima do corpo
+	var hand_radius: float = 2.5  ## bolinha na ponta (mão) pra dar visual de garra
+	var shoulder_offset_y: float = 2.0  ## ombros ligeiramente acima do centro
+	var shoulder_offset_x: float = 5.0  ## ombros à esquerda/direita pra criar o "V" do braço
+	var primary_target: Vector2 = Vector2.ZERO  ## onde o braço ativo (com arma) chega
+	var secondary_target: Vector2 = Vector2.ZERO  ## onde o braço passivo (ou 2ª arma) chega
+	var secondary_active: bool = false  ## true se 2º braço também segura arma (Dual Wield)
+	var visible_now: bool = true
+
+	func _ready() -> void:
+		# Garante que _process roda mesmo se Godot não auto-detectar.
+		set_process(true)
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		if not visible_now:
+			return
+		var right_shoulder := Vector2(shoulder_offset_x, -shoulder_offset_y)
+		var left_shoulder := Vector2(-shoulder_offset_x, -shoulder_offset_y)
+		# Braço primário sai do ombro do lado pra qual aponta.
+		var primary_shoulder: Vector2 = right_shoulder if primary_target.x >= 0.0 else left_shoulder
+		# Braço secundário sai do OUTRO ombro — garante simetria visual.
+		var sec_shoulder: Vector2 = left_shoulder if primary_shoulder == right_shoulder else right_shoulder
+
+		# --- Braço primário (segura a arma principal) ---
+		_draw_arm(primary_shoulder, primary_target, true)
+
+		# --- Braço secundário ---
+		_draw_arm(sec_shoulder, secondary_target, secondary_active)
+
+
+	## Desenha um braço (ombro → ponta) com contorno + cor + mão.
+	## active=true desenha a "mão" maior (segurando arma); active=false mão pequena.
+	func _draw_arm(shoulder: Vector2, hand_pos: Vector2, active: bool) -> void:
+		draw_line(shoulder, hand_pos, Color(0, 0, 0, 1.0), arm_thickness + 2.0)
+		draw_line(shoulder, hand_pos, arm_color, arm_thickness)
+		var r: float = hand_radius if active else hand_radius * 0.75
+		draw_circle(hand_pos, r + 1.0, Color(0, 0, 0, 1.0))
+		draw_circle(hand_pos, r, arm_color)
+
+
 ## Substitui a textura da arma visível e o tint dos projéteis disparados pelo player.
 ## Chamado por cada cartucho-arma no setup/on_level_up.
 func set_weapon_visual(texture: ImageTexture, p_tint: Color = Color.WHITE) -> void:
 	if texture != null and weapon_sprite != null:
 		weapon_sprite.texture = texture
+		weapon_sprite.modulate = p_tint
+	# Sincroniza segunda arma (se Dual Wield ativo).
+	if texture != null and weapon_sprite_secondary != null:
+		weapon_sprite_secondary.texture = texture
+		weapon_sprite_secondary.modulate = p_tint
 	projectile_tint = p_tint
 
 
@@ -234,6 +316,8 @@ func _update_walk_animation(delta: float) -> void:
 
 ## Mira a arma no inimigo mais próximo (orbitando o player), ou aponta na direção
 ## de movimento/facing quando não há alvo. Mantém o player com cara de "armado".
+## Se dual_wield_active, posiciona segunda arma 180° oposta (mira pra trás —
+## simulando inimigos atrás também).
 func _update_weapon_aim() -> void:
 	if weapon_sprite == null:
 		return
@@ -250,6 +334,56 @@ func _update_weapon_aim() -> void:
 	weapon_sprite.rotation = dir.angle()
 	# Quando aponta pra esquerda, espelha verticalmente para o cano não ficar de cabeça pra baixo.
 	weapon_sprite.flip_v = dir.x < 0
+
+	# Atualiza o braço primário (do shoulder até o cabo da arma).
+	if arms_renderer != null:
+		# A "mão" segura no início da arma (próximo do cabo, dentro da textura).
+		var grip_offset: float = WEAPON_OFFSET - 4.0
+		arms_renderer.primary_target = dir * grip_offset
+
+	# Segunda arma: aponta no SEGUNDO inimigo mais próximo, ou no oposto se não houver.
+	if dual_wield_active and weapon_sprite_secondary != null:
+		var dir2: Vector2 = _find_secondary_aim_dir(enemy, dir)
+		weapon_sprite_secondary.position = dir2 * WEAPON_OFFSET
+		weapon_sprite_secondary.rotation = dir2.angle()
+		weapon_sprite_secondary.flip_v = dir2.x < 0
+		if arms_renderer != null:
+			arms_renderer.secondary_target = dir2 * (WEAPON_OFFSET - 6.0)
+			arms_renderer.secondary_active = true
+	elif arms_renderer != null:
+		# Sem dual wield: braço passivo extende no sentido OPOSTO ao ativo,
+		# saindo do ombro contrário. Comprimento menor (~70%) — pose de "balance".
+		var passive_dist: float = (WEAPON_OFFSET - 4.0) * 0.7
+		arms_renderer.secondary_target = -dir * passive_dist
+		arms_renderer.secondary_active = false
+
+	# Força redraw — não confia só no _process do _PlayerArms.
+	if arms_renderer != null:
+		arms_renderer.queue_redraw()
+
+
+## Procura segundo alvo distinto do primário, ou retorna direção oposta como fallback.
+func _find_secondary_aim_dir(primary_enemy: Enemy, primary_dir: Vector2) -> Vector2:
+	if primary_enemy == null:
+		return -primary_dir
+	var enemies := get_tree().get_nodes_in_group("enemies")
+	var best: Enemy = null
+	var best_d: float = WEAPON_AIM_RADIUS
+	for e in enemies:
+		if not (e is Enemy):
+			continue
+		if e == primary_enemy:
+			continue
+		var enemy := e as Enemy
+		if enemy._dying_anim:
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < best_d:
+			best_d = d
+			best = enemy
+	if best != null:
+		return (best.global_position - global_position).normalized()
+	return -primary_dir
 
 
 ## Reage ao signal player_leveled_up trocando a sprite do GAMO quando cruza
@@ -440,6 +574,10 @@ func _start_death_sequence() -> void:
 		cartridge_root.process_mode = Node.PROCESS_MODE_DISABLED
 	if weapon_sprite != null:
 		weapon_sprite.visible = false
+	if weapon_sprite_secondary != null:
+		weapon_sprite_secondary.visible = false
+	if arms_renderer != null:
+		arms_renderer.visible_now = false
 
 	HitStop.freeze(0.15)
 	Audio.play(Audio.Sfx.PLAYER_HURT)
