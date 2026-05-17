@@ -38,6 +38,16 @@ func _build_visual() -> void:
 	_sprite.centered = true
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_sprite.play("default")
+	# Glow azul-ciano pra chamar atenção pra coleta de XP.
+	var glow_shader: Shader = load("res://shaders/glow.gdshader")
+	if glow_shader != null:
+		var mat := ShaderMaterial.new()
+		mat.shader = glow_shader
+		mat.set_shader_parameter("glow_strength", 2.0)
+		mat.set_shader_parameter("glow_radius", 2.5)
+		mat.set_shader_parameter("glow_tint", Color("#00e5ff"))
+		mat.set_shader_parameter("threshold", 0.3)
+		_sprite.material = mat
 	add_child(_sprite)
 
 

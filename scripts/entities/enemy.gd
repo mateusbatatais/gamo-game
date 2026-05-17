@@ -184,10 +184,28 @@ func _drop_xp_gem() -> void:
 
 
 func _spawn_death_particles() -> void:
-	var particles := DeathParticle.new()
-	particles.global_position = global_position
-	particles.setup(death_color)
-	get_parent().add_child(particles)
+	# 3 bursts em posições levemente offset criam impressão de "explosão" maior.
+	# Cores variando do death_color base → branco brilhante no centro.
+	for i in 3:
+		var p := DeathParticle.new()
+		p.global_position = global_position + Vector2(
+			randf_range(-4.0, 4.0), randf_range(-4.0, 4.0)
+		)
+		# Burst central mais brilhante, outros com cor base.
+		var burst_color: Color = death_color
+		if i == 0:
+			burst_color = Color(
+				min(1.0, death_color.r + 0.3),
+				min(1.0, death_color.g + 0.3),
+				min(1.0, death_color.b + 0.3),
+				1.0
+			)
+		p.setup(burst_color)
+		get_parent().add_child(p)
+	# Hit spark adicional pra "flash" de impacto.
+	var spark := HitSpark.new()
+	get_parent().add_child(spark)
+	spark.setup(global_position, death_color)
 
 
 func _maybe_drop_health() -> void:

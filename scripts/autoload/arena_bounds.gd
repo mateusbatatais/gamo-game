@@ -1,4 +1,4 @@
-## Bordas do mundo do jogo (em coordenadas de viewport 320x180).
+## Bordas do mundo do jogo (em coordenadas de viewport 640x360).
 ## Singleton para entidades clampearem posição sem acoplamento com a cena.
 extends Node
 

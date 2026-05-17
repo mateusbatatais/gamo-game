@@ -309,15 +309,23 @@ func _update_walk_animation(delta: float) -> void:
 	if sprite == null:
 		return
 	var speed_sq: float = velocity.length_squared()
-	if speed_sq > 100.0:  # threshold pra considerar "andando"
+	var base_scale: float = sprite_scale_value
+	if speed_sq > 100.0:
+		# Andando: bob mais forte + leve sway + sprite escala mais nervosa
 		_walk_phase += delta * 12.0
-		sprite.position.y = sin(_walk_phase) * 1.5
-		sprite.rotation = sin(_walk_phase * 0.5) * 0.06  # ~3.5°
+		sprite.position.y = sin(_walk_phase) * 1.8
+		sprite.rotation = sin(_walk_phase * 0.5) * 0.07  # ~4°
+		# Squash & stretch sutil — vertical contrai quando "pé bate no chão"
+		var stretch_y: float = 1.0 - abs(sin(_walk_phase * 2.0)) * 0.05
+		sprite.scale = Vector2(base_scale, base_scale * stretch_y)
 	else:
-		# Idle: bob suave constante (efeito flutuando)
+		# Idle: bob suave + breath cycle (escala respira ~1% pra parecer vivo).
+		# Frequência diferente do bob (mais lenta) pra criar sensação orgânica.
 		_walk_phase += delta * 2.0
-		sprite.position.y = sin(_walk_phase) * 0.6
+		sprite.position.y = sin(_walk_phase) * 0.8
 		sprite.rotation = lerpf(sprite.rotation, 0.0, delta * 8.0)
+		var breath: float = 1.0 + sin(_walk_phase * 0.7) * 0.025
+		sprite.scale = Vector2(base_scale, base_scale * breath)
 
 
 ## Mira a arma no inimigo mais próximo (orbitando o player), ou aponta na direção

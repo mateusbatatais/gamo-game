@@ -19,6 +19,9 @@ var _lifetime: float = DEFAULT_LIFETIME
 
 var _sprite: Sprite2D
 var _hits: Array = []
+var _trail_timer: float = 0.0
+const TRAIL_INTERVAL := 0.03  ## tempo entre afterimages do projétil
+const TRAIL_LIFETIME := 0.18
 
 
 func _ready() -> void:
@@ -35,6 +38,16 @@ func _build_visual() -> void:
 	_sprite.centered = true
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_sprite.modulate = tint
+	# Glow shader — halo colorido que se mistura com o tint do projétil.
+	var glow_shader: Shader = load("res://shaders/glow.gdshader")
+	if glow_shader != null:
+		var mat := ShaderMaterial.new()
+		mat.shader = glow_shader
+		mat.set_shader_parameter("glow_strength", 1.6)
+		mat.set_shader_parameter("glow_radius", 2.2)
+		mat.set_shader_parameter("glow_tint", tint)
+		mat.set_shader_parameter("threshold", 0.25)
+		_sprite.material = mat
 	add_child(_sprite)
 
 
@@ -44,6 +57,8 @@ func set_tint(p_tint: Color) -> void:
 	tint = p_tint
 	if _sprite != null:
 		_sprite.modulate = p_tint
+		if _sprite.material is ShaderMaterial:
+			(_sprite.material as ShaderMaterial).set_shader_parameter("glow_tint", p_tint)
 
 
 func _build_shape() -> void:
@@ -66,11 +81,38 @@ func setup(start_pos: Vector2, dir: Vector2, p_damage: int, p_speed: float = 280
 func _physics_process(delta: float) -> void:
 	position += direction * speed * delta
 	_age += delta
+	_spawn_trail(delta)
 	if _age >= _lifetime:
 		queue_free()
 		return
 	if not _inside_play_area():
 		_try_bounce()
+
+
+## Spawna afterimages atrás do projétil pra dar sensação de velocidade.
+## Só roda em projéteis rápidos (speed > 200 px/s).
+func _spawn_trail(delta: float) -> void:
+	if speed < 200.0 or _sprite == null:
+		return
+	_trail_timer -= delta
+	if _trail_timer > 0.0:
+		return
+	_trail_timer = TRAIL_INTERVAL
+	var ghost := Sprite2D.new()
+	ghost.texture = _sprite.texture
+	ghost.centered = _sprite.centered
+	ghost.scale = _sprite.scale * 0.85  ## ligeiramente menor pra dar efeito de fade
+	ghost.modulate = Color(tint.r, tint.g, tint.b, 0.55)
+	ghost.rotation = rotation
+	ghost.global_position = global_position
+	ghost.z_index = -1
+	get_parent().add_child(ghost)
+	# Tween de fade-out + shrink, depois free.
+	var tween := ghost.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(ghost, "modulate:a", 0.0, TRAIL_LIFETIME)
+	tween.tween_property(ghost, "scale", Vector2.ZERO, TRAIL_LIFETIME)
+	tween.chain().tween_callback(ghost.queue_free)
 
 
 func _inside_play_area() -> bool:
@@ -102,6 +144,11 @@ func _on_body_entered(body: Node2D) -> void:
 	var final_dmg: int = int(round(float(damage) * (crit_mult if is_crit else 1.0)))
 	(body as Enemy).take_damage(final_dmg, Vector2.ZERO, is_crit)
 	Audio.play(Audio.Sfx.HIT)
+	# Hit spark: explosão de pontos brilhantes no ponto de impacto. Crits = mais
+	# partículas e cor amarela.
+	var spark := HitSpark.new()
+	get_parent().add_child(spark)
+	spark.setup(global_position, Color("#ffeb3b") if is_crit else tint)
 	if pierce_left > 0:
 		pierce_left -= 1
 	else:
