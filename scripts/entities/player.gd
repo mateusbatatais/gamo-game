@@ -67,6 +67,24 @@ var _dying: bool = false  # bloqueia input/dano enquanto a morte cinemática rod
 
 
 func _ready() -> void:
+	# Talents (meta-progressão permanente). Aplicados ANTES do modifier pra que
+	# multiplicadores percentuais do modifier também escalem o bônus do talent.
+	max_hp += TalentTree.bonus_max_hp()
+	damage_mult *= (1.0 + TalentTree.damage_mult_bonus())
+	move_speed *= (1.0 + TalentTree.move_speed_mult_bonus())
+	crit_chance += TalentTree.crit_chance_bonus()
+	pickup_radius_mult *= (1.0 + TalentTree.pickup_range_mult_bonus())
+	# Aplica multiplicadores do modifier ativo (run picked before going to arena).
+	max_hp = int(max(1, round(max_hp * ModifierSystem.hp_mult())))
+	move_speed = move_speed * ModifierSystem.move_speed_mult()
+	damage_mult *= ModifierSystem.damage_mult()
+	# Crit overrides (PERMA-CRIT etc).
+	var crit_c_o: float = ModifierSystem.crit_chance_override()
+	if crit_c_o >= 0.0:
+		crit_chance = crit_c_o
+	var crit_m_o: float = ModifierSystem.crit_mult_override()
+	if crit_m_o >= 0.0:
+		crit_mult = crit_m_o
 	current_hp = max_hp
 	add_to_group("player")
 	collision_layer = 2  # player body
@@ -322,8 +340,10 @@ func _update_flicker() -> void:
 		return
 	if _hurt_flash_timer > 0.0:
 		# Flash de dano: clarão vermelho saturado por ~0.18s.
+		# Photosensitive: reduz pico de vermelho de 2.5x pra 1.6x.
 		var f: float = _hurt_flash_timer / HURT_FLASH_TIME
-		sprite.modulate = Color(2.5, 0.4 + (1.0 - f) * 0.6, 0.4 + (1.0 - f) * 0.6, 1.0)
+		var red_peak: float = 1.6 if Settings.photosensitive_mode else 2.5
+		sprite.modulate = Color(red_peak, 0.4 + (1.0 - f) * 0.6, 0.4 + (1.0 - f) * 0.6, 1.0)
 	elif _invul_timer > 0.0:
 		var t: float = float(Time.get_ticks_msec()) * 0.04
 		var alpha: float = 0.4 + 0.5 * absf(sin(t))
@@ -356,6 +376,8 @@ func take_damage(amount: int, knockback_source_dir: Vector2 = Vector2.ZERO) -> v
 		return
 	# Filtra pelo BoonSystem (IRON_SKIN reduz dano em 50% se ativo).
 	amount = BoonSystem.filter_damage(amount)
+	# Modificador (ex: MASOCHIST x2).
+	amount = int(round(float(amount) * ModifierSystem.damage_taken_mult()))
 	if amount <= 0:
 		return
 	current_hp = max(0, current_hp - amount)

@@ -17,7 +17,8 @@ func setup_homing(
 ) -> void:
 	setup(start_pos, dir, p_damage, p_speed, 0)
 	turn_rate = p_turn_rate
-	_target = _find_target()
+	# Não busca alvo aqui — o cartucho chama setup antes de add_child, então
+	# get_tree() seria null. _physics_process busca lazy no primeiro frame.
 
 
 func _physics_process(delta: float) -> void:
@@ -38,7 +39,7 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 
 
-func _find_target() -> Enemy:
+ func _find_target() -> Enemy:
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var nearest: Enemy = null
 	var nearest_d: float = seek_radius

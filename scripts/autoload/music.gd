@@ -19,6 +19,10 @@ const PENTA_MAJOR := [261.63, 293.66, 329.63, 392.00, 440.00]
 # A=220, C=261.63, D=293.66, E=329.63, G=392.00 — fundamental "lá menor".
 const SCALE_MENU := [220.00, 261.63, 293.66, 329.63, 392.00]
 
+# Pentatônica menor harmônica em D — base para Era 3 64-bit (boss-y, polygon hell).
+# D=293.66, F=349.23, G#=415.30, A=440.00, C=523.25 — usa o tritone (D-G#) pra criar tensão.
+const SCALE_ERA3 := [293.66, 349.23, 415.30, 440.00, 523.25]
+
 # Patterns — Era 1 (heroica, ritmo direto)
 const MELODY_ERA1 := [
 	0, -1, 2, -1, 3, -1, 2, -1,
@@ -46,6 +50,21 @@ const MELODY_BOSS := [
 ]
 const BASS_BOSS := [0, 0, 0, 0, 2, 2, 2, 2, 4, 4, 4, 4, 3, 3, 0, 0]
 
+# Patterns — Era 3 (64-bit polygonal, arpejos quebrados + saltos)
+# Estrutura: A (subida cromática) → B (arpejo descendente) → C (chamada e resposta)
+const MELODY_ERA3 := [
+	# A — subida com o tritone (índice 2 = G#) pra dar tensão
+	0, 2, 0, 4, 1, 2, 0, -1,
+	# B — arpejo quebrado descendente
+	4, 2, 3, 1, 4, 2, 0, -1,
+	# C — chamada (alta) + resposta (baixa)
+	4, 3, 2, -1, 0, 1, 0, -1,
+	# Outro — riff final com salto
+	0, 4, 2, 4, 3, 2, 1, 0,
+]
+# Bass agressivo: oitavas paralelas no root com pulsos no tritone (índice 2).
+const BASS_ERA3 := [0, 0, 0, 0, 2, 2, 0, 0, 3, 3, 0, 0, 2, 2, 0, 0]
+
 # Patterns — Menu (épico/aventura, pentatônica menor de Lá)
 # Estrutura: A (climb) → A' (resolução) → B (climax) → A (retorno)
 const MELODY_MENU := [
@@ -61,7 +80,7 @@ const MELODY_MENU := [
 # Baixo caminhante (uma oitava abaixo) — uma nota por 2 beats da melodia.
 const BASS_MENU := [0, 0, 2, 2, 3, 3, 4, 4, 0, 0, 1, 1, 2, 2, 0, 0]
 
-enum TrackId { MENU, ERA1, ERA2, BOSS }
+enum TrackId { MENU, ERA1, ERA2, ERA3, BOSS }
 
 var _players: Dictionary = {}  # TrackId -> AudioStreamPlayer
 var _current: int = -1
@@ -77,6 +96,8 @@ func _ready() -> void:
 		_generate_track(MELODY_ERA1, BASS_ERA1, PENTA_MINOR, 1.0, false, 0.32))
 	_register(TrackId.ERA2,
 		_generate_track(MELODY_ERA2, BASS_ERA2, PENTA_MAJOR, 1.08, false, 0.30))
+	_register(TrackId.ERA3,
+		_generate_era3_track())
 	_register(TrackId.BOSS,
 		_generate_track(MELODY_BOSS, BASS_BOSS, PENTA_MINOR, 1.18, true, 0.32))
 
@@ -137,6 +158,67 @@ func _generate_menu_track() -> AudioStreamWAV:
 	return stream
 
 
+## Track da Era 3 (64-bit polygon hell) — pesada e ameaçadora.
+## Diferencial: kick grave em todo beat (sensação de "batida 3D" pulsante),
+## detuned lead (uma 2ª voz ligeiramente desafinada pra "wobble" tipo N64) e
+## sub-bass em oitava ainda mais baixa.
+func _generate_era3_track() -> AudioStreamWAV:
+	var sample_count := int(SAMPLE_RATE * TRACK_DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var pitch_mult: float = 1.06
+
+	for i in sample_count:
+		var t: float = float(i) / float(SAMPLE_RATE)
+		var beat_idx: int = int(t / BEAT_DURATION) % BEATS
+		var beat_t: float = fmod(t, BEAT_DURATION) / BEAT_DURATION
+
+		var sample: float = 0.0
+
+		# Lead principal
+		var mel_note: int = MELODY_ERA3[beat_idx]
+		if mel_note >= 0 and mel_note < SCALE_ERA3.size():
+			var freq: float = SCALE_ERA3[mel_note] * pitch_mult
+			var env: float = _envelope(beat_t)
+			sample += _square(t * freq) * env * 0.30
+			# Lead detuned (mesma nota desafinada em ~6 Hz pra criar "wobble" tipo N64).
+			sample += _square(t * (freq + 4.5)) * env * 0.14
+
+		# Sub-bass em oitava ainda mais baixa (1/4 do root) pra peso 3D.
+		var bass_idx: int = (beat_idx / 2) % BASS_ERA3.size()
+		var bass_note: int = BASS_ERA3[bass_idx]
+		if bass_note >= 0 and bass_note < SCALE_ERA3.size():
+			var b_freq: float = SCALE_ERA3[bass_note] * 0.25 * pitch_mult
+			var b_env: float = _envelope(fmod(beat_t * 0.5 + (float(beat_idx % 2) * 0.5), 1.0))
+			sample += _square(t * b_freq) * b_env * 0.28
+
+		# Kick grave em todo beat ímpar (1, 3, 5...) — pulse "3D"
+		if beat_idx % 2 == 0 and beat_t < 0.08:
+			var kick_env: float = 1.0 - beat_t / 0.08
+			# Kick = senóide grave (60Hz) com envelope rápido + um pouco de ruído.
+			sample += sin(t * 60.0 * TAU) * kick_env * 0.32
+			sample += _noise(t) * kick_env * 0.08
+
+		# Hi-hat de fundo em contratempo (beats pares)
+		if beat_idx % 2 == 1 and beat_t < 0.04:
+			sample += _noise(t) * 0.10
+
+		var value: int = clampi(int(sample * 32767.0), -32767, 32767)
+		var unsigned_value: int = value if value >= 0 else value + 65536
+		data[i * 2] = unsigned_value & 0xFF
+		data[i * 2 + 1] = (unsigned_value >> 8) & 0xFF
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = SAMPLE_RATE
+	stream.stereo = false
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = sample_count
+	return stream
+
+
 func _register(id: int, stream: AudioStreamWAV) -> void:
 	var p := AudioStreamPlayer.new()
 	p.stream = stream
@@ -151,10 +233,13 @@ func play_menu() -> void:
 
 
 func play_normal_for_era(era_id: String) -> void:
-	if era_id == "era_32bit_cd":
-		_play(TrackId.ERA2)
-	else:
-		_play(TrackId.ERA1)
+	match era_id:
+		"era_32bit_cd":
+			_play(TrackId.ERA2)
+		"era_64bit":
+			_play(TrackId.ERA3)
+		_:
+			_play(TrackId.ERA1)
 
 
 func play_normal() -> void:

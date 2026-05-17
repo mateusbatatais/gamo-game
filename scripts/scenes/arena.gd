@@ -61,7 +61,12 @@ func _build_camera() -> void:
 
 ## Dispara um screen shake: amplitude em pixels, duração em segundos.
 ## Chamado por eventos de impacto (dano no player, morte de boss, etc).
+## Respeita Settings.screen_shake (desliga totalmente) e photosensitive_mode (50%).
 func trigger_shake(amplitude: float, duration: float = 0.22) -> void:
+	if not Settings.screen_shake:
+		return
+	if Settings.photosensitive_mode:
+		amplitude *= 0.5
 	if amplitude > _shake_amplitude:
 		_shake_amplitude = amplitude
 	if duration > _shake_remaining:
@@ -103,6 +108,12 @@ func _build_pause_menu() -> void:
 	# Toast de conquistas escuta o EventBus globalmente.
 	var toast := AchievementToast.new()
 	add_child(toast)
+	# Toast de lore cards (combos mid-run podem desbloquear cartas).
+	var card_toast := LoreCardToast.new()
+	add_child(card_toast)
+	# Tutorial — só aparece se ainda não foi visto.
+	if not GameState.tutorial_seen:
+		add_child(TutorialOverlay.new())
 
 
 func _build_background() -> void:

@@ -16,10 +16,12 @@ func _ready() -> void:
 	# A fallback font geralmente é um FontFile (TrueType). Tentamos cast.
 	if fb is FontFile:
 		var ff: FontFile = fb
-		ff.antialiasing = TextServer.FONT_ANTIALIASING_NONE
-		ff.hinting = TextServer.HINTING_NONE
+		# Antialiasing GRAYSCALE em vez de NONE — preserva feel chunky em textos
+		# grandes mas evita jaggies severas nos labels pequenos (10-12).
+		ff.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+		ff.hinting = TextServer.HINTING_FULL
 		ff.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
 		ff.force_autohinter = false
 		ff.allow_system_fallback = false
-	# Tamanhos default também sobem um pouco pra ler bem em viewport 640.
-	ThemeDB.fallback_font_size = max(ThemeDB.fallback_font_size, 12)
+	# Tamanhos default sobem pra 13 — labels sem override ficam mais legíveis.
+	ThemeDB.fallback_font_size = max(ThemeDB.fallback_font_size, 13)

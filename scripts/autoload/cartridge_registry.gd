@@ -185,6 +185,56 @@ func _register_all() -> void:
 		Rarity.SPECIAL,
 		"res://scripts/cartridges/reflector.gd"
 	))
+	# --- Cartuchos extras (Fase 5) ---
+	_add(CartridgeDef.new(
+		"chain_lightning",
+		"Chain Lightning",
+		"Tiro arca pra ate N inimigos proximos, dano cai a cada salto.",
+		CartridgeType.WEAPON,
+		Rarity.SPECIAL,
+		"res://scripts/cartridges/chain_lightning.gd"
+	))
+	_add(CartridgeDef.new(
+		"cluster_bomb",
+		"Cluster Bomb",
+		"Projetil explode em estilhacos em padrao estrela.",
+		CartridgeType.WEAPON,
+		Rarity.RARE,
+		"res://scripts/cartridges/cluster_bomb.gd"
+	))
+	_add(CartridgeDef.new(
+		"burst_rifle",
+		"Burst Rifle",
+		"Dispara rajadas rapidas de 3+ tiros.",
+		CartridgeType.WEAPON,
+		Rarity.COMMON,
+		"res://scripts/cartridges/burst_rifle.gd"
+	))
+	# --- Cartuchos Fase 7 ---
+	_add(CartridgeDef.new(
+		"drone",
+		"Drone",
+		"Companheiros autonomos orbitam e atiram em inimigos.",
+		CartridgeType.WEAPON,
+		Rarity.SPECIAL,
+		"res://scripts/cartridges/drone.gd"
+	))
+	_add(CartridgeDef.new(
+		"beam_laser",
+		"Beam Laser",
+		"Laser continuo que queima inimigos na linha.",
+		CartridgeType.WEAPON,
+		Rarity.SPECIAL,
+		"res://scripts/cartridges/beam_laser.gd"
+	))
+	_add(CartridgeDef.new(
+		"vampiric",
+		"Vampiric",
+		"Cura ao matar inimigos. Chance escala por nivel.",
+		CartridgeType.PASSIVE,
+		Rarity.RARE,
+		"res://scripts/cartridges/vampiric.gd"
+	))
 
 
 func _register_evolutions() -> void:

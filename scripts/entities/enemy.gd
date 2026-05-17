@@ -28,6 +28,11 @@ func _ready() -> void:
 	add_to_group("enemies")
 	collision_layer = 8
 	collision_mask = 1  # apenas world; player é detectado via Area2D hurtbox
+	# Prestige scaling: +15% HP/dmg + 25% tokens por nível NG+ (cap 5).
+	var p_mult: float = 1.0 + GameState.prestige_level * 0.15
+	max_hp = int(max(1, round(max_hp * p_mult)))
+	contact_damage = int(max(1, round(contact_damage * p_mult)))
+	token_value = int(max(1, round(token_value * (1.0 + GameState.prestige_level * 0.25))))
 	current_hp = max_hp
 	_build_shape()
 	_build_visual()
@@ -91,7 +96,7 @@ func _chase_player(_delta: float) -> void:
 		return
 	var dir := (player.global_position - global_position)
 	if dir.length_squared() > 0.01:
-		velocity = dir.normalized() * move_speed
+		velocity = dir.normalized() * move_speed * ModifierSystem.enemy_speed_mult()
 	else:
 		velocity = Vector2.ZERO
 
@@ -108,7 +113,9 @@ func _update_flash(delta: float) -> void:
 		return
 	if _flash_timer > 0.0:
 		_flash_timer -= delta
-		sprite.modulate = Color(2.5, 2.5, 2.5, 1.0)
+		# Photosensitive: reduz flash de 2.5x pra 1.5x (ainda visível, menos agressivo).
+		var f: float = 1.5 if Settings.photosensitive_mode else 2.5
+		sprite.modulate = Color(f, f, f, 1.0)
 	elif GameState.is_enemies_frozen():
 		# Tint azul-claro de "congelado" durante o power-up FREEZE.
 		sprite.modulate = Color(0.55, 0.85, 1.6, 1.0)
@@ -196,7 +203,9 @@ func _maybe_drop_health() -> void:
 func _maybe_drop_power_up() -> void:
 	if power_up_drop_chance <= 0.0:
 		return
-	if randf() > power_up_drop_chance:
+	# Lucky Chip talent adiciona absoluto na chance.
+	var chance: float = power_up_drop_chance + TalentTree.power_up_drop_bonus()
+	if randf() > chance:
 		return
 	var p := PowerUp.new()
 	# Sorteia entre os 3 tipos de power-up.

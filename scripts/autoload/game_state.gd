@@ -15,9 +15,15 @@ var memory_tokens: int = 0  ## moeda persistente, gasta na hub
 var upgrade_levels: Dictionary = {}  ## id (String) -> level (int)
 var achievements_unlocked: Array[String] = []
 var intro_seen: bool = false
+var tutorial_seen: bool = false  ## true após primeira run completar overlays
 var current_skin_id: String = "default"
 var unlocked_skins: Array[String] = ["default"]
 var encountered_enemies: Array[String] = []  ## ids dos inimigos já vistos (codex)
+var collected_lore_cards: Array[String] = []  ## ids de lore cards desbloqueados
+var run_history: Array = []  ## últimas 10 runs: [{victory, time, kills, max_combo, era_reached}]
+var konami_unlocked: bool = false  ## easter egg flag
+var prestige_level: int = 0  ## NG+ — cada vitória completa incrementa (cap 5)
+var talent_levels: Dictionary = {}  ## id (String) -> level (int) — meta-progressão
 # Stats de run (capturados pra game-over)
 var last_run_damage_dealt: int = 0
 var last_run_max_combo: int = 0
@@ -111,10 +117,25 @@ func end_run(victory: bool) -> void:
 	last_run_victory = victory
 	if run_time > best_run_time:
 		best_run_time = run_time
+	# Prestige: vitória plena (bosses 3/3) sobe NG+ até cap 5.
+	if victory and bosses_defeated.size() >= 3 and prestige_level < 5:
+		prestige_level += 1
 	# Captura snapshot dos stats pra tela de game-over.
 	last_run_damage_dealt = run_damage_dealt
 	last_run_max_combo = max(combo, last_run_max_combo)
 	last_run_tokens_earned = run_tokens_earned
+	# Adiciona ao histórico de runs (mantém últimas 10)
+	var entry := {
+		"victory": victory,
+		"time": run_time,
+		"kills": run_kills,
+		"max_combo": last_run_max_combo,
+		"era_reached": selected_era_id,
+		"stage_index": stage_index,
+	}
+	run_history.push_front(entry)
+	while run_history.size() > 10:
+		run_history.pop_back()
 	var stats := {
 		"time": run_time,
 		"kills": run_kills,
@@ -127,10 +148,27 @@ func end_run(victory: bool) -> void:
 	save_progress()
 
 
+func unlock_lore_card(card_id: String) -> void:
+	if card_id in collected_lore_cards:
+		return
+	collected_lore_cards.append(card_id)
+	EventBus.lore_card_unlocked.emit(card_id)
+	save_progress()
+
+
+func unlock_konami() -> void:
+	if konami_unlocked:
+		return
+	konami_unlocked = true
+	save_progress()
+
+
 ## Concede tokens (chamado por enemy._die). Atualiza stats e propaga via EventBus.
+## Aplica multiplicador do ModifierSystem (ex: GREED +75%, MASOCHIST x3).
 func grant_tokens(amount: int) -> void:
 	if amount <= 0:
 		return
+	amount = int(round(float(amount) * ModifierSystem.tokens_mult()))
 	memory_tokens += amount
 	run_tokens_earned += amount
 	total_tokens_earned += amount
@@ -193,6 +231,8 @@ func is_enemies_frozen() -> bool:
 
 
 func freeze_enemies_for(duration: float) -> void:
+	# FROSTBITE modifier estende a duração.
+	duration *= ModifierSystem.freeze_duration_mult()
 	enemies_frozen_until = run_time + duration
 
 
@@ -218,9 +258,15 @@ func save_progress() -> void:
 	cfg.set_value("progress", "max_combo_ever", max_combo_ever)
 	cfg.set_value("progress", "total_tokens_earned", total_tokens_earned)
 	cfg.set_value("progress", "intro_seen", intro_seen)
+	cfg.set_value("progress", "tutorial_seen", tutorial_seen)
 	cfg.set_value("progress", "current_skin_id", current_skin_id)
 	cfg.set_value("progress", "unlocked_skins", unlocked_skins)
 	cfg.set_value("progress", "encountered_enemies", encountered_enemies)
+	cfg.set_value("progress", "collected_lore_cards", collected_lore_cards)
+	cfg.set_value("progress", "run_history", run_history)
+	cfg.set_value("progress", "konami_unlocked", konami_unlocked)
+	cfg.set_value("progress", "prestige_level", prestige_level)
+	cfg.set_value("progress", "talent_levels", talent_levels)
 	var err := cfg.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Falha ao salvar progresso: %s" % err)
@@ -260,6 +306,7 @@ func load_progress() -> void:
 	max_combo_ever = cfg.get_value("progress", "max_combo_ever", 0)
 	total_tokens_earned = cfg.get_value("progress", "total_tokens_earned", 0)
 	intro_seen = cfg.get_value("progress", "intro_seen", false)
+	tutorial_seen = cfg.get_value("progress", "tutorial_seen", false)
 	current_skin_id = cfg.get_value("progress", "current_skin_id", "default")
 	var raw_skins: Array = cfg.get_value("progress", "unlocked_skins", ["default"])
 	unlocked_skins.clear()
@@ -273,10 +320,29 @@ func load_progress() -> void:
 	for e in raw_enc:
 		if e is String:
 			encountered_enemies.append(e)
+	var raw_cards: Array = cfg.get_value("progress", "collected_lore_cards", [])
+	collected_lore_cards.clear()
+	for c in raw_cards:
+		if c is String:
+			collected_lore_cards.append(c)
+	var raw_history: Array = cfg.get_value("progress", "run_history", [])
+	run_history.clear()
+	for r in raw_history:
+		if r is Dictionary:
+			run_history.append(r)
+	konami_unlocked = cfg.get_value("progress", "konami_unlocked", false)
+	prestige_level = cfg.get_value("progress", "prestige_level", 0)
+	var raw_talents: Variant = cfg.get_value("progress", "talent_levels", {})
+	talent_levels = raw_talents if raw_talents is Dictionary else {}
 
 
 func mark_intro_seen() -> void:
 	intro_seen = true
+	save_progress()
+
+
+func mark_tutorial_seen() -> void:
+	tutorial_seen = true
 	save_progress()
 
 

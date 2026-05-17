@@ -26,6 +26,8 @@ func _reset() -> void:
 func add_xp(amount: int) -> void:
 	# Multiplicador de upgrade permanente "xp_gain" aplicado aqui.
 	amount = int(round(float(amount) * UpgradeRegistry.get_xp_multiplier()))
+	# Modificador da run (ex: GREED -30%).
+	amount = int(round(float(amount) * ModifierSystem.xp_mult()))
 	current_xp += amount
 	var leveled := false
 	# Slow-mo curto se vai rolar um level-up — dá o momento de "uau".

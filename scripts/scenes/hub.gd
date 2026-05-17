@@ -48,7 +48,17 @@ func _build() -> void:
 
 	_build_spirits_panel()
 	_build_collection_panel()
+	_build_npcs()
 	_build_buttons()
+
+
+func _build_npcs() -> void:
+	# Strip de 3 NPCs visitantes no topo, abaixo do título.
+	# Reduzido pra não tocar o token label à direita.
+	var npcs := HubNpcs.new()
+	npcs.position = Vector2(12, 34)
+	npcs.size = Vector2(390, 22)
+	add_child(npcs)
 
 
 func _build_era_row() -> void:
@@ -105,8 +115,8 @@ func _make_era_button(era_id: String) -> Button:
 
 
 const SPIRITS_PANEL_POS := Vector2(12, 74)
-const SPIRITS_PANEL_SIZE := Vector2(296, 232)
-const SPIRIT_CARD_SIZE := Vector2(296, 232)
+const SPIRITS_PANEL_SIZE := Vector2(240, 232)
+const SPIRIT_CARD_SIZE := Vector2(240, 232)
 
 
 func _build_spirits_panel() -> void:
@@ -220,8 +230,8 @@ func _make_spirit_card(spirit_id: String, card_size: Vector2) -> Button:
 	# Linha de thumbnails de skin
 	var skins := SkinRegistry.all_ids()
 	var skin_count := skins.size()
-	var thumb_w: int = 36
-	var thumb_gap: int = 6
+	var thumb_w: int = 30
+	var thumb_gap: int = 4
 	var total_w: int = skin_count * thumb_w + (skin_count - 1) * thumb_gap
 	var skins_y: int = skin_lbl_y + skin_lbl_h
 	var start_x: int = int((card_size.x - total_w) / 2)
@@ -236,7 +246,7 @@ func _make_spirit_card(spirit_id: String, card_size: Vector2) -> Button:
 	var stats_y: int = skins_y + skins_h
 	var info := Label.new()
 	info.name = "SkinInfo"
-	info.add_theme_font_size_override("font_size", 9)
+	info.add_theme_font_size_override("font_size", 10)
 	info.add_theme_color_override("font_color", Color(0.75, 0.78, 0.85))
 	info.add_theme_color_override("font_outline_color", Color.BLACK)
 	info.add_theme_constant_override("outline_size", 2)
@@ -297,7 +307,7 @@ func _make_skin_thumb(skin_id: String, preview_sprite: Sprite2D, name_label: Lab
 		mini.scale = Vector2(1.0, 1.0)
 		mini.modulate = Color(0.5, 0.5, 0.55)
 	mini.centered = true
-	mini.position = Vector2(18, 22)
+	mini.position = Vector2(15, 22)
 	thumb.add_child(mini)
 
 	if unlocked:
@@ -363,11 +373,13 @@ func _grayscale(palette: Dictionary) -> Dictionary:
 	return out
 
 
-const COLLECTION_PANEL_X := 328  # VIEWPORT_W / 2 + 8
+const COLLECTION_PANEL_X := 264  ## logo após o painel de spirits (240 wide + 12 margin)
+const COLLECTION_PANEL_W := VIEWPORT_W - COLLECTION_PANEL_X - 12  ## 364 wide
 const COLLECTION_COLS := 4
-const COLLECTION_CARD_SIZE := Vector2(72, 52)
+const COLLECTION_CARD_SIZE := Vector2(84, 56)  ## maior pra cabeçalho não cortar
 const COLLECTION_H_SEP := 4
 const COLLECTION_V_SEP := 4
+const COLLECTION_SCROLL_HEIGHT := 226  ## de y=74 até y=300
 
 
 func _build_collection_panel() -> void:
@@ -379,26 +391,36 @@ func _build_collection_panel() -> void:
 	label.size = Vector2(200, 16)
 	add_child(label)
 
-	var grid := GridContainer.new()
-	grid.columns = COLLECTION_COLS
-	grid.add_theme_constant_override("h_separation", COLLECTION_H_SEP)
-	grid.add_theme_constant_override("v_separation", COLLECTION_V_SEP)
-	grid.position = Vector2(COLLECTION_PANEL_X, 74)
-	add_child(grid)
-
-	for id in CartridgeRegistry.all_ids():
-		var slot := _make_cartridge_slot(id)
-		grid.add_child(slot)
-
+	# Contador agora vai pro CANTO DIREITO da label, em vez de overlapping o grid.
 	var total: int = CartridgeRegistry.all_ids().size()
 	var collected: int = GameState.collected_cartridges.size()
 	var count_label := Label.new()
 	count_label.text = I18n.tf("hub_collected_count", [collected, total])
 	count_label.add_theme_font_size_override("font_size", 11)
 	count_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
-	count_label.position = Vector2(COLLECTION_PANEL_X, 296)
-	count_label.size = Vector2(280, 16)
+	count_label.position = Vector2(COLLECTION_PANEL_X + 80, 58)
+	count_label.size = Vector2(COLLECTION_PANEL_W - 80, 14)
+	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(count_label)
+
+	# ScrollContainer com altura fixa — colecao cresce verticalmente sem invadir
+	# a barra de botões nem o counter.
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(COLLECTION_PANEL_X, 74)
+	scroll.size = Vector2(COLLECTION_PANEL_W, COLLECTION_SCROLL_HEIGHT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+
+	var grid := GridContainer.new()
+	grid.columns = COLLECTION_COLS
+	grid.add_theme_constant_override("h_separation", COLLECTION_H_SEP)
+	grid.add_theme_constant_override("v_separation", COLLECTION_V_SEP)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(grid)
+
+	for id in CartridgeRegistry.all_ids():
+		var slot := _make_cartridge_slot(id)
+		grid.add_child(slot)
 
 
 func _make_cartridge_slot(cartridge_id: String) -> Control:
@@ -421,13 +443,13 @@ func _make_cartridge_slot(cartridge_id: String) -> Control:
 	var inner_w: float = COLLECTION_CARD_SIZE.x - 8
 	var name_label := Label.new()
 	name_label.text = def.display_name if collected else I18n.t("hub_unknown")
-	name_label.add_theme_font_size_override("font_size", 9)
+	name_label.add_theme_font_size_override("font_size", 10)
 	name_label.add_theme_color_override(
 		"font_color",
 		CartridgeRegistry.rarity_color(def.rarity) if collected else Color(0.4, 0.4, 0.4)
 	)
 	name_label.position = Vector2(4, 4)
-	name_label.size = Vector2(inner_w, 28)
+	name_label.size = Vector2(inner_w, 32)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
@@ -439,7 +461,7 @@ func _make_cartridge_slot(cartridge_id: String) -> Control:
 		I18n.t("lvl_up_weapon") if def.type == CartridgeRegistry.CartridgeType.WEAPON
 		else I18n.t("lvl_up_passive")
 	)
-	type_label.add_theme_font_size_override("font_size", 8)
+	type_label.add_theme_font_size_override("font_size", 9)
 	type_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	type_label.position = Vector2(4, COLLECTION_CARD_SIZE.y - 14)
 	type_label.size = Vector2(inner_w, 12)
@@ -467,17 +489,17 @@ func _build_buttons() -> void:
 	# quando inimigos morressem na arena e tokens_changed disparasse.
 	EventBus.tokens_changed.connect(_on_tokens_changed)
 
-	# 5 botões na barra inferior. Cada um 100 px de largura, separação 6 px.
-	# Total: 5*100 + 4*6 = 524, cabe no viewport de 640.
-	var btn_w := 100
-	var sep := 6
+	# 7 botões na barra inferior. Cada um 78 px de largura, separação 5 px.
+	# Total: 7*78 + 6*5 = 576, cabe no viewport de 640.
+	var btn_w := 78
+	var sep := 5
 	var hbox := HBoxContainer.new()
 	hbox.anchor_top = 1.0
 	hbox.anchor_bottom = 1.0
 	hbox.anchor_left = 0.5
 	hbox.anchor_right = 0.5
-	hbox.position = Vector2(-262, -36)
-	hbox.size = Vector2(524, 28)
+	hbox.position = Vector2(-288, -36)
+	hbox.size = Vector2(576, 28)
 	hbox.add_theme_constant_override("separation", sep)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(hbox)
@@ -490,11 +512,19 @@ func _build_buttons() -> void:
 	upgrades.pressed.connect(_on_open_upgrades)
 	hbox.add_child(upgrades)
 
+	var talents := _make_button("TALENTOS", false, btn_w)
+	talents.pressed.connect(_on_open_talents)
+	hbox.add_child(talents)
+
 	var archive := _make_button("ARQUIVO", false, btn_w)
 	archive.pressed.connect(_on_open_codex)
 	hbox.add_child(archive)
 
-	var achievements := _make_button("CONQUISTAS", false, btn_w)
+	var album := _make_button("ALBUM", false, btn_w)
+	album.pressed.connect(_on_open_album)
+	hbox.add_child(album)
+
+	var achievements := _make_button("CONQ.", false, btn_w)
 	achievements.pressed.connect(_on_open_achievements)
 	hbox.add_child(achievements)
 
@@ -502,7 +532,7 @@ func _build_buttons() -> void:
 	back.pressed.connect(_on_back)
 	hbox.add_child(back)
 
-	# Instancia o modal de upgrades + painel de conquistas + codex (escondidos até clicar).
+	# Instancia o modal de upgrades + painel de conquistas + codex + album (escondidos até clicar).
 	var modal := UpgradesModal.new()
 	modal.name = "UpgradesModal"
 	add_child(modal)
@@ -515,6 +545,26 @@ func _build_buttons() -> void:
 	codex.name = "CodexPanel"
 	add_child(codex)
 
+	var album_panel := LoreAlbum.new()
+	album_panel.name = "LoreAlbum"
+	add_child(album_panel)
+
+	# Toast pra notificar quando uma nova carta é desbloqueada durante a sessão.
+	var toast := LoreCardToast.new()
+	toast.name = "LoreCardToast"
+	add_child(toast)
+
+	# Painel de modificadores — aparece quando o jogador clica JOGAR.
+	var draft := ModifierDraftPanel.new()
+	draft.name = "ModifierDraftPanel"
+	draft.picked.connect(_on_modifier_picked)
+	add_child(draft)
+
+	# Painel da Talent Tree (meta-progressão permanente).
+	var talents_panel := TalentTreePanel.new()
+	talents_panel.name = "TalentTreePanel"
+	add_child(talents_panel)
+
 	# Seta animada acompanhando o foco do menu.
 	add_child(MenuCursor.new())
 
@@ -523,6 +573,18 @@ func _build_buttons() -> void:
 
 func _on_open_codex() -> void:
 	var panel := get_node_or_null("CodexPanel") as CodexPanel
+	if panel != null:
+		panel.open()
+
+
+func _on_open_album() -> void:
+	var panel := get_node_or_null("LoreAlbum") as LoreAlbum
+	if panel != null:
+		panel.open()
+
+
+func _on_open_talents() -> void:
+	var panel := get_node_or_null("TalentTreePanel") as TalentTreePanel
 	if panel != null:
 		panel.open()
 
@@ -619,6 +681,18 @@ func _refresh_spirit_selection() -> void:
 
 
 func _on_play() -> void:
+	# Garante que uma run iniciada pela hub não seja contabilizada como diária
+	# caso o jogador tenha clicado em "JOGAR AGORA" e voltado sem terminar.
+	DailyRun.clear_daily_flag()
+	# Abre o draft de modificadores antes da run.
+	var draft := get_node_or_null("ModifierDraftPanel") as ModifierDraftPanel
+	if draft != null:
+		draft.open()
+	else:
+		SceneRouter.go_to_arena()
+
+
+func _on_modifier_picked() -> void:
 	SceneRouter.go_to_arena()
 
 

@@ -41,6 +41,9 @@ signal boons_changed(active_list: Array)
 signal environmental_event_started(kind: int)
 signal environmental_event_ended(kind: int)
 
+# --- Lore Cards ---
+signal lore_card_unlocked(card_id: String)
+
 # --- Boss ---
 signal boss_warning  # antes do boss aparecer
 signal boss_spawned(boss: Node2D)

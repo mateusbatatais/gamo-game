@@ -447,6 +447,17 @@ func _update_hp(current: int, maximum: int) -> void:
 	var t: float = clampf(float(current) / float(maximum), 0.0, 1.0)
 	_hp_bar.size = Vector2(136.0 * t, 8)
 	_hp_label.text = I18n.tf("hud_hp", [current, maximum])
+	# Colorblind: HP bar fica amarela quando cheia e laranja/vermelha conforme
+	# baixa — gradiente luminância forte pra não depender de tom vermelho saturado.
+	if Settings.colorblind_mode:
+		if t > 0.5:
+			_hp_bar.color = Color("#ffeb3b")
+		elif t > 0.25:
+			_hp_bar.color = Color("#ff9800")
+		else:
+			_hp_bar.color = Color("#ffffff")
+	else:
+		_hp_bar.color = Color("#e53935")
 
 
 func _on_xp_changed(_amount: int, current: int, needed: int) -> void:

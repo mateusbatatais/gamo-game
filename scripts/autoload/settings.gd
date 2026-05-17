@@ -15,6 +15,7 @@ var screen_shake: bool = true
 
 # --- Acessibilidade ---
 var photosensitive_mode: bool = false  # reduz flashes e shake
+var colorblind_mode: bool = false  # ajusta cores críticas (HP, dano) pra evitar confusão
 
 # --- Localização ---
 var locale: String = "pt_BR"
@@ -88,6 +89,12 @@ func set_photosensitive(value: bool) -> void:
 	changed.emit()
 
 
+func set_colorblind(value: bool) -> void:
+	colorblind_mode = value
+	save_settings()
+	changed.emit()
+
+
 func set_locale(new_locale: String) -> void:
 	locale = new_locale
 	I18n.set_locale(new_locale)
@@ -156,6 +163,7 @@ func save_settings() -> void:
 	cfg.set_value("video", "crt", crt_shader_enabled)
 	cfg.set_value("video", "screen_shake", screen_shake)
 	cfg.set_value("a11y", "photosensitive", photosensitive_mode)
+	cfg.set_value("a11y", "colorblind", colorblind_mode)
 	cfg.set_value("locale", "current", locale)
 	cfg.set_value("controls", "keybinds", custom_keybinds)
 	cfg.save(SETTINGS_PATH)
@@ -171,6 +179,7 @@ func load_settings() -> void:
 	crt_shader_enabled = cfg.get_value("video", "crt", crt_shader_enabled)
 	screen_shake = cfg.get_value("video", "screen_shake", screen_shake)
 	photosensitive_mode = cfg.get_value("a11y", "photosensitive", photosensitive_mode)
+	colorblind_mode = cfg.get_value("a11y", "colorblind", colorblind_mode)
 	locale = cfg.get_value("locale", "current", locale)
 	var raw_keybinds: Dictionary = cfg.get_value("controls", "keybinds", {})
 	custom_keybinds = raw_keybinds

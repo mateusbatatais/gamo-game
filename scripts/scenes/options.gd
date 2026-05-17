@@ -75,6 +75,10 @@ func _build() -> void:
 		I18n.t("options_photosensitive"), Settings.photosensitive_mode,
 		func(v: bool) -> void: Settings.set_photosensitive(v)
 	))
+	left_vbox.add_child(_make_checkbox_row(
+		I18n.t("options_colorblind"), Settings.colorblind_mode,
+		func(v: bool) -> void: Settings.set_colorblind(v)
+	))
 
 	left_vbox.add_child(_make_section_label(I18n.t("options_language")))
 	left_vbox.add_child(_make_language_row())

@@ -144,26 +144,45 @@ func _build() -> void:
 	add_child(_mascot)
 
 	# --- Botões em linha horizontal abaixo do mascote ---
+	# 5 botões agora (RUN DIÁRIA + DIÁRIO + OPÇÕES + JOGAR + SAIR). 84x32 cada.
+	# 5*84 + 4*8 = 452. Aumenta um pouco a largura do hbox.
 	_hbox = HBoxContainer.new()
 	_hbox.anchor_left = 0.5
 	_hbox.anchor_right = 0.5
-	_hbox.position = Vector2(-220, 260)
-	_hbox.size = Vector2(440, 32)
-	_hbox.add_theme_constant_override("separation", 12)
+	_hbox.position = Vector2(-228, 260)
+	_hbox.size = Vector2(456, 32)
+	_hbox.add_theme_constant_override("separation", 8)
 	_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(_hbox)
 
-	var play_btn := _make_button(I18n.t("menu_play"))
+	var play_btn := _make_button(I18n.t("menu_play"), 84)
 	play_btn.pressed.connect(_on_play)
 	_hbox.add_child(play_btn)
 
-	var options_btn := _make_button(I18n.t("menu_options"))
+	var daily_btn := _make_button("DIÁRIA", 84)
+	daily_btn.pressed.connect(_on_open_daily)
+	_hbox.add_child(daily_btn)
+
+	var diary_btn := _make_button("DIÁRIO", 84)
+	diary_btn.pressed.connect(_on_open_diary)
+	_hbox.add_child(diary_btn)
+
+	var options_btn := _make_button(I18n.t("menu_options"), 84)
 	options_btn.pressed.connect(_on_options)
 	_hbox.add_child(options_btn)
 
-	var quit_btn := _make_button(I18n.t("menu_quit"))
+	var quit_btn := _make_button(I18n.t("menu_quit"), 84)
 	quit_btn.pressed.connect(_on_quit)
 	_hbox.add_child(quit_btn)
+
+	# Painéis modais (escondidos até abrir).
+	var diary := RunDiary.new()
+	diary.name = "RunDiary"
+	add_child(diary)
+
+	var daily_panel := DailyRunPanel.new()
+	daily_panel.name = "DailyRunPanel"
+	add_child(daily_panel)
 
 	# "PRESS START" piscando no rodapé
 	_press_start_label = Label.new()
@@ -250,10 +269,10 @@ class _MenuStars extends Node2D:
 			draw_rect(Rect2(pos, Vector2(2, 2)), Color(0.9, 0.95, 1, 0.85), true)
 
 
-func _make_button(text: String) -> Button:
+func _make_button(text: String, width: int = 130) -> Button:
 	var btn := Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(130, 32)
+	btn.custom_minimum_size = Vector2(width, 32)
 	btn.add_theme_font_size_override("font_size", 16)
 
 	var sb := StyleBoxFlat.new()
@@ -294,6 +313,18 @@ func _make_scanline_texture() -> ImageTexture:
 
 func _on_play() -> void:
 	SceneRouter.go_to_hub()
+
+
+func _on_open_diary() -> void:
+	var panel := get_node_or_null("RunDiary") as RunDiary
+	if panel != null:
+		panel.open()
+
+
+func _on_open_daily() -> void:
+	var panel := get_node_or_null("DailyRunPanel") as DailyRunPanel
+	if panel != null:
+		panel.open()
 
 
 func _on_options() -> void:

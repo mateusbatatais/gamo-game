@@ -102,6 +102,19 @@ func _register_all() -> void:
 		func(): return GameState.total_kills >= 1000,
 		"Acumule 1.000 abates totais (Catalogador Iniciante)."
 	))
+	# Konami — vermelho/branco/azul tipo controle clássico (easter egg)
+	_add(SkinDef.new(
+		"konami", "Cheat Code",
+		"30 vidas no estilo dos clássicos. Você sabe o código.",
+		{
+			"#": Color("#d32f2f"), "=": Color("#7f0000"),
+			"L": Color("#ffffff"), "o": Color("#ff5252"),
+			"O": Color("#ffeb3b"), "x": Color("#0d47a1"),
+			"-": Color("#000000"),
+		},
+		func(): return GameState.konami_unlocked,
+		"Acorde o código que dorme nos clássicos."
+	))
 
 
 func _add(def: SkinDef) -> void:

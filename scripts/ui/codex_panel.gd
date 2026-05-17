@@ -130,7 +130,7 @@ func _make_row(id: String) -> Panel:
 	# Tag de categoria (mini-pill)
 	var cat_lbl := Label.new()
 	cat_lbl.text = entry.category
-	cat_lbl.add_theme_font_size_override("font_size", 9)
+	cat_lbl.add_theme_font_size_override("font_size", 10)
 	cat_lbl.add_theme_color_override("font_color", category_color if seen else Color(0.35, 0.35, 0.4))
 	cat_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
 	cat_lbl.add_theme_constant_override("outline_size", 1)
@@ -156,6 +156,13 @@ func _make_row(id: String) -> Panel:
 	desc_lbl.size = Vector2(PANEL_WIDTH - 96, 14)
 	desc_lbl.clip_text = true
 	row.add_child(desc_lbl)
+
+	# Bio in-universe — aparece no tooltip ao hover (só pra entries vistas).
+	if seen and entry.lore != "":
+		row.tooltip_text = "%s\n\n— LOG DO GAMO —\n%s" % [
+			entry.description, entry.lore
+		]
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	return row
 
