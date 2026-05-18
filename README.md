@@ -47,6 +47,26 @@ gamo-game/
 └── export/             # Builds (gitignored)
 ```
 
+## Export Web (HTML5)
+
+Pra jogar no navegador:
+
+1. **Editor → Project → Export**
+2. O preset **"Web"** já está configurado em `export_presets.cfg`
+3. Primeiro uso: clique em **"Manage Export Templates"** e baixe os templates web (`~50MB`)
+4. Botão **"Export Project"** → escolhe destino (default: `build/web/index.html`)
+
+Resultado: 4 arquivos em `build/web/`:
+- `index.html` — usa o shell custom em [web/shell.html](./web/shell.html) com loading bar pixel-art
+- `index.js` + `index.wasm` — engine Godot compilado para web
+- `index.pck` — assets do jogo
+
+Pra testar local: `python -m http.server 8000` dentro de `build/web/` e abrir `http://localhost:8000`. Servir via `file://` não funciona por causa de CORS.
+
+Pra deploy: hospedar a pasta `build/web/` em qualquer static host (GitHub Pages, Netlify, Cloudflare Pages, gamo.games). Configurar os MIME types corretos pro `.wasm` (`application/wasm`) — a maioria dos hosts já cuida disso.
+
+**Loading bar customizado**: o shell `web/shell.html` mostra título "CARTRIDGE CRUSADE" estilizado + barra de progresso chunky enquanto o engine + .pck baixam, e desaparece com fade quando o jogo está pronto. Reporte de progresso vem do callback `onProgress` do Godot engine.
+
 ## Filosofia técnica
 - **Sem assets autorais externos**: sprites em ASCII art + paleta convertidos em ImageTexture em runtime. SFX gerados sfxr-style em código.
 - **Tipagem forte** em GDScript (`func foo(x: int) -> bool:`).

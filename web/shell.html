@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!--
+  Custom HTML shell pra export web do Cartridge Crusade.
+  Aplica visual pixel-art combinando com o jogo + loading bar com progresso real
+  vindo do engine. Substitui o shell default do Godot 4.
+
+  Tokens substituídos no export pelo Godot:
+    $GODOT_PROJECT_NAME — nome do projeto
+    $GODOT_HEAD_INCLUDE — headers extras do export (analytics, etc)
+    $GODOT_URL — URL do .js do engine
+    $GODOT_SPLASH — caminho da splash image (sem uso aqui)
+    $GODOT_CONFIG — config object pro engine
+-->
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="width=device-width, user-scalable=no" />
+	<title>$GODOT_PROJECT_NAME</title>
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		html, body {
+			width: 100%; height: 100%;
+			background: #050510;
+			color: #ffeb3b;
+			font-family: 'Courier New', monospace;
+			overflow: hidden;
+			image-rendering: pixelated;
+			image-rendering: crisp-edges;
+		}
+		body {
+			display: flex; align-items: center; justify-content: center;
+		}
+		/* Canvas do jogo — escondido até carregar */
+		#canvas {
+			display: block;
+			margin: 0 auto;
+			background: #050510;
+			outline: none;
+			image-rendering: pixelated;
+			image-rendering: crisp-edges;
+		}
+		#canvas:focus { outline: none; }
+		/* Tela de loading — pixel-art aesthetic */
+		#loading-screen {
+			position: fixed; inset: 0;
+			background: #050510;
+			display: flex; flex-direction: column;
+			align-items: center; justify-content: center;
+			gap: 32px;
+			z-index: 10;
+			transition: opacity 0.5s ease-out;
+		}
+		#loading-screen.hidden { opacity: 0; pointer-events: none; }
+		.title {
+			text-align: center;
+			line-height: 1.1;
+		}
+		.title-line-1 {
+			font-size: 56px;
+			font-weight: 900;
+			color: #9bbc0f;
+			text-shadow:
+				4px 0 0 #306230, -4px 0 0 #306230,
+				0 4px 0 #306230, 0 -4px 0 #306230,
+				4px 4px 0 #000, -4px -4px 0 #000;
+			letter-spacing: 4px;
+		}
+		.title-line-2 {
+			font-size: 56px;
+			font-weight: 900;
+			color: #ffeb3b;
+			text-shadow:
+				4px 0 0 #5a3f10, -4px 0 0 #5a3f10,
+				0 4px 0 #5a3f10, 0 -4px 0 #5a3f10,
+				4px 4px 0 #000, -4px -4px 0 #000;
+			letter-spacing: 4px;
+		}
+		.subtitle {
+			color: #00e5ff;
+			font-size: 14px;
+			letter-spacing: 6px;
+			text-shadow: 2px 2px 0 #000;
+		}
+		/* Loading bar chunky estilo SNES */
+		.progress-wrap {
+			width: 420px;
+			max-width: 80%;
+			display: flex; flex-direction: column;
+			gap: 8px;
+		}
+		.progress-frame {
+			height: 24px;
+			border: 3px solid #9bbc0f;
+			background: #0a1a0a;
+			padding: 2px;
+			box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #306230;
+			position: relative;
+			overflow: hidden;
+		}
+		.progress-fill {
+			height: 100%;
+			background: linear-gradient(180deg, #ffeb3b 0%, #d4a017 50%, #ff9800 100%);
+			width: 0%;
+			transition: width 0.18s linear;
+			image-rendering: pixelated;
+		}
+		.progress-text {
+			color: #bdbdbd;
+			font-size: 12px;
+			text-align: center;
+			letter-spacing: 2px;
+		}
+		.hint {
+			color: #5a5a5a;
+			font-size: 11px;
+			text-align: center;
+			letter-spacing: 1px;
+			margin-top: 8px;
+		}
+		/* Erro fatal — substitui a tela inteira */
+		#error {
+			color: #ff5252;
+			font-size: 14px;
+			max-width: 80%;
+			text-align: center;
+			white-space: pre-wrap;
+			display: none;
+		}
+		/* Botão "começar" — Godot 4 exige interação antes de inicializar audio */
+		.start-btn {
+			background: #0a1a0a;
+			border: 3px solid #ffeb3b;
+			color: #ffeb3b;
+			padding: 16px 48px;
+			font-family: inherit;
+			font-size: 16px;
+			letter-spacing: 4px;
+			cursor: pointer;
+			margin-top: 8px;
+			box-shadow: 0 0 0 2px #000, inset 0 0 0 1px #5a3f10;
+			display: none;
+		}
+		.start-btn:hover {
+			background: #ffeb3b;
+			color: #050510;
+		}
+		.start-btn:active { transform: translate(2px, 2px); }
+		/* Pisca o cursor de texto pra dar feel retrô */
+		@keyframes blink {
+			0%, 50% { opacity: 1; }
+			51%, 100% { opacity: 0.3; }
+		}
+		.blink { animation: blink 1s steps(2, end) infinite; }
+	</style>
+	$GODOT_HEAD_INCLUDE
+</head>
+<body>
+	<canvas id="canvas"></canvas>
+
+	<div id="loading-screen">
+		<div class="title">
+			<div class="title-line-1">CARTRIDGE</div>
+			<div class="title-line-2">CRUSADE</div>
+		</div>
+		<div class="subtitle">by gamo.games</div>
+
+		<div class="progress-wrap">
+			<div class="progress-frame">
+				<div id="progress-fill" class="progress-fill"></div>
+			</div>
+			<div id="progress-text" class="progress-text">CARREGANDO 0%</div>
+		</div>
+
+		<button id="start-btn" class="start-btn">► CLIQUE PRA INICIAR ◄</button>
+		<div id="hint" class="hint blink">aguarde...</div>
+		<div id="error"></div>
+	</div>
+
+	<script src="$GODOT_URL"></script>
+	<script>
+		const GODOT_CONFIG = $GODOT_CONFIG;
+		const loadingScreen = document.getElementById('loading-screen');
+		const progressFill = document.getElementById('progress-fill');
+		const progressText = document.getElementById('progress-text');
+		const startBtn = document.getElementById('start-btn');
+		const hint = document.getElementById('hint');
+		const errorEl = document.getElementById('error');
+		const canvas = document.getElementById('canvas');
+
+		function setProgress(percent) {
+			percent = Math.max(0, Math.min(100, percent));
+			progressFill.style.width = percent + '%';
+			progressText.textContent = 'CARREGANDO ' + Math.floor(percent) + '%';
+		}
+
+		function showError(msg) {
+			errorEl.textContent = msg;
+			errorEl.style.display = 'block';
+			hint.style.display = 'none';
+		}
+
+		const engine = new Engine(GODOT_CONFIG);
+
+		// Resize canvas to fit window while keeping 16:9 aspect.
+		function resizeCanvas() {
+			const aspect = 640 / 360;
+			let w = window.innerWidth;
+			let h = window.innerHeight;
+			if (w / h > aspect) {
+				w = h * aspect;
+			} else {
+				h = w / aspect;
+			}
+			canvas.style.width = Math.floor(w) + 'px';
+			canvas.style.height = Math.floor(h) + 'px';
+		}
+		window.addEventListener('resize', resizeCanvas);
+		resizeCanvas();
+
+		engine.startGame({
+			'onProgress': function(current, total) {
+				if (total > 0) {
+					setProgress((current / total) * 100);
+				} else {
+					setProgress(0);
+				}
+			},
+			'canvas': canvas,
+		}).then(function() {
+			setProgress(100);
+			progressText.textContent = 'PRONTO';
+			hint.textContent = 'iniciando...';
+			// Fade out loading screen
+			setTimeout(function() {
+				loadingScreen.classList.add('hidden');
+				setTimeout(function() {
+					loadingScreen.style.display = 'none';
+				}, 600);
+			}, 400);
+		}).catch(function(err) {
+			console.error(err);
+			showError('Falha ao carregar:\n' + (err.message || err));
+		});
+	</script>
+</body>
+</html>
