@@ -39,6 +39,8 @@ var _player: Player
 
 
 func _ready() -> void:
+	# Layer 5 — acima do gameplay (default layer 0) mas abaixo de modais
+	# (DialogBox 6, BossIntro 8, LevelUpModal 10, Toasts 12, CRT 100).
 	layer = 5
 	_build()
 	_build_stage_progress()
@@ -177,12 +179,34 @@ func _build() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
+	# Strip escuro semi-transparente no topo da tela — dá contraste pros
+	# elementos do HUD (HP, timer, level) contra o background. Usa gradiente
+	# vertical pra "desaparecer" no fundo da tela.
+	var top_strip := _StripDarken.new()
+	top_strip.anchor_right = 1.0
+	top_strip.position = Vector2(0, 0)
+	top_strip.size = Vector2(0, 78)
+	top_strip.gradient_from_top = true
+	top_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(top_strip)
+
+	# Strip escuro no rodapé pra dar leitura à barra de XP.
+	var bottom_strip := _StripDarken.new()
+	bottom_strip.anchor_top = 1.0
+	bottom_strip.anchor_bottom = 1.0
+	bottom_strip.anchor_right = 1.0
+	bottom_strip.offset_top = -20
+	bottom_strip.offset_bottom = 0
+	bottom_strip.gradient_from_top = false
+	bottom_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(bottom_strip)
+
 	# --- HP (top-left) com frame chunky SNES ---
 	var hp_frame := Panel.new()
 	hp_frame.position = Vector2(6, 6)
 	hp_frame.size = Vector2(144, 16)
 	var hp_sb := PanelFrames.chunky(
-		Color(0.06, 0.0, 0.0, 0.92),
+		Color(0.06, 0.0, 0.0, 1.0),
 		Color("#c62828"),
 		Color(0, 0, 0, 1)
 	)
@@ -191,7 +215,7 @@ func _build() -> void:
 
 	# ColorRect mantido por baixo só pra controlar a barra de preenchimento (animada).
 	_hp_bg = ColorRect.new()
-	_hp_bg.color = Color(0.08, 0.0, 0.0, 0.6)
+	_hp_bg.color = Color(0.08, 0.0, 0.0, 1.0)
 	_hp_bg.position = Vector2(10, 10)
 	_hp_bg.size = Vector2(136, 8)
 	root.add_child(_hp_bg)
@@ -541,3 +565,32 @@ func _make_cartridge_slot(def: CartridgeRegistry.CartridgeDef, level: int) -> Co
 	lbl.position = Vector2(5, -2)
 	ctrl.add_child(lbl)
 	return ctrl
+
+
+## Strip de escurecimento gradiente pras bordas do HUD — dá contraste contra
+## o background sem block visual sólido. Top: começa preto opaco no topo, fade
+## pra transparente embaixo. Bottom: oposto (começa transparente em cima, preto
+## embaixo). Renderiza via _draw com gradiente vertical.
+class _StripDarken extends Control:
+	var gradient_from_top: bool = true
+
+	func _ready() -> void:
+		set_process(true)
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		var h: int = int(size.y)
+		if h <= 0:
+			return
+		var rows := h
+		for y in rows:
+			var t: float = float(y) / float(max(1, rows - 1))
+			var alpha: float = lerpf(0.55, 0.0, t) if gradient_from_top else lerpf(0.0, 0.55, t)
+			draw_line(
+				Vector2(0, y),
+				Vector2(size.x, y),
+				Color(0, 0, 0, alpha),
+				1.0
+			)
