@@ -430,7 +430,31 @@ func _show_stage_cleared() -> void:
 	cleared.show_for_stage(GameState.stage_label(), next_name, stats)
 	await cleared.advance_requested
 	cleared.queue_free()
+	# Mini-puzzle opcional entre fases — restaure o cartucho.
+	# Acerto = cura + bônus tokens. Skip/erro = sem punição.
+	await _run_inter_stage_puzzle()
 	_advance_stage()
+
+
+## Roda o puzzle de "restaurar cartucho" entre fases. Vitória recompensa o player
+## com cura total + 80 tokens. Pulou ou errou: segue direto sem bônus.
+## Pausa o gameplay durante o puzzle pra não ter inimigos/spawner rodando no fundo.
+func _run_inter_stage_puzzle() -> void:
+	var puzzle := CartridgePuzzle.new()
+	add_child(puzzle)
+	puzzle.start()  ## inicializa em INTRO — player aperta ENTER pra começar
+	get_tree().paused = true
+	var success: bool = await puzzle.completed
+	get_tree().paused = false
+	puzzle.queue_free()
+	if success and _player != null and is_instance_valid(_player):
+		_player.heal(_player.max_hp)  # cura total
+		GameState.grant_tokens(80)
+		_spawn_dialog(
+			"GAMO.SYS",
+			"Cartucho restaurado. Energia recarregada. +80 tokens.",
+			Color("#9bbc0f")
+		)
 
 
 ## Avança a arena pra próxima fase: limpa tudo, configura nova era, recomeça spawn.
@@ -456,11 +480,23 @@ func _advance_stage() -> void:
 	# Reseta spawner com pool de inimigos da nova era.
 	if _spawner != null:
 		_spawner.reset_for_new_stage()
+	# Player ganha tier de armadura novo (T1 → T2 → T3 conforme a fase).
+	if _player != null and is_instance_valid(_player):
+		_player.update_visual_tier_for_stage()
 	# HUD atualiza barra de progresso (run_time foi resetado em GameState).
 	_spawn_dialog(
 		"GAMO.SYS",
 		"Atravessando pra %s..." % EraRegistry.get_def(GameState.selected_era_id).display_name,
 		Color("#00e5ff")
+	)
+	# Banner dramático "FASE X — ERA Y  ▲ DIFICULDADE +Z% ▲"
+	var banner := StageBanner.new()
+	add_child(banner)
+	var difficulty_pct: int = int(round((GameState.stage_difficulty_mult() - 1.0) * 100.0))
+	banner.show_stage(
+		GameState.stage_index + 1,
+		EraRegistry.get_def(GameState.selected_era_id).display_name,
+		difficulty_pct
 	)
 	Music.play_normal_for_era(GameState.selected_era_id)  # nova era, nova track
 

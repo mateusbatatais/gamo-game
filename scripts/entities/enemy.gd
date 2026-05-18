@@ -28,11 +28,19 @@ func _ready() -> void:
 	add_to_group("enemies")
 	collision_layer = 8
 	collision_mask = 1  # apenas world; player é detectado via Area2D hurtbox
-	# Prestige scaling: +15% HP/dmg + 25% tokens por nível NG+ (cap 5).
+	# Stage scaling: +60% HP/dmg por fase da run (player mantém poder, inimigos
+	# precisam acompanhar pra não virar trivia).
+	var s_mult: float = GameState.stage_difficulty_mult()
+	# Prestige scaling: +15% HP/dmg por nível NG+ (cap 5).
 	var p_mult: float = 1.0 + GameState.prestige_level * 0.15
-	max_hp = int(max(1, round(max_hp * p_mult)))
-	contact_damage = int(max(1, round(contact_damage * p_mult)))
-	token_value = int(max(1, round(token_value * (1.0 + GameState.prestige_level * 0.25))))
+	var total_mult: float = s_mult * p_mult
+	max_hp = int(max(1, round(max_hp * total_mult)))
+	contact_damage = int(max(1, round(contact_damage * total_mult)))
+	# Tokens compensam levemente a fase mais difícil (+15% por stage).
+	var reward_mult: float = GameState.stage_reward_mult() * (1.0 + GameState.prestige_level * 0.25)
+	token_value = int(max(1, round(token_value * reward_mult)))
+	# XP também acompanha — fases mais difíceis dão um pouco mais de XP.
+	xp_value = int(max(1, round(xp_value * GameState.stage_reward_mult())))
 	current_hp = max_hp
 	_build_shape()
 	_build_visual()

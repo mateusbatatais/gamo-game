@@ -44,12 +44,27 @@ func reset_for_new_stage() -> void:
 	_spawn_timer = 0.0
 	enabled = true
 	_setup_entries()
-	# Fase 2 em diante começa "pré-aquecida" — pula 30% da curva pra spawnar
-	# mais inimigos e os de unlock_time mais tarde aparecerem cedo.
+	# Fase 2 = 55% pré-aquecida, Fase 3 = 75% — onda inicial bem mais densa
+	# que antes (era 30% fixo). Resolve o "primeira onda fraca demais".
+	match GameState.stage_index:
+		1:
+			_time_alive = DIFFICULTY_RAMP_TIME * 0.55
+		2:
+			_time_alive = DIFFICULTY_RAMP_TIME * 0.75
+		_:
+			_time_alive = 0.0
+	# Bursts iniciais: spawna 2-3 waves IMEDIATAMENTE em fases avançadas, pra
+	# o jogador não ter o "vácuo" de chegar e nada acontecer por 5s.
 	if GameState.stage_index > 0:
-		_time_alive = DIFFICULTY_RAMP_TIME * 0.3
-	else:
-		_time_alive = 0.0
+		_spawn_initial_burst()
+
+
+## Despeja 2-3 waves logo no início da fase, sem esperar pelo timer normal.
+## Cria sensação de "chegou e já tá no fogo".
+func _spawn_initial_burst() -> void:
+	var burst_count: int = 2 + GameState.stage_index  ## fase 1 = 3 / fase 2 = 4
+	for i in burst_count:
+		_spawn_wave()
 
 
 func _setup_entries() -> void:
@@ -74,7 +89,18 @@ func _process(delta: float) -> void:
 
 func _current_interval() -> float:
 	var t: float = clampf(_time_alive / DIFFICULTY_RAMP_TIME, 0.0, 1.0)
-	return lerpf(BASE_SPAWN_INTERVAL, MIN_SPAWN_INTERVAL, t)
+	var base: float = lerpf(BASE_SPAWN_INTERVAL, MIN_SPAWN_INTERVAL, t)
+	# Fases avançadas spawnam mais rápido — -25% no intervalo por stage.
+	# Stage 0 = 100%, Stage 1 = 75%, Stage 2 = 50% do intervalo base.
+	var stage_speedup: float = 1.0 - float(GameState.stage_index) * 0.25
+	return base * max(0.4, stage_speedup)
+
+
+func _wave_size() -> int:
+	var t: float = clampf(_time_alive / DIFFICULTY_RAMP_TIME, 0.0, 1.0)
+	# Wave size base 1→3 conforme tempo, + bonus por stage (1 a mais por fase).
+	var base: int = int(roundf(lerpf(1.0, 3.0, t)))
+	return base + GameState.stage_index
 
 
 func _spawn_wave() -> void:
@@ -87,7 +113,12 @@ func _spawn_wave() -> void:
 	if picked_id == "ascii_swarm":
 		group_size = max(group_size, 3 + randi() % 3)
 
-	var origin := ArenaBounds.random_spawn_point(24.0)
+	# Margem do spawn fica menor em fases avançadas — inimigos aparecem mais
+	# próximos da arena pra evitar "stuck nas laterais" que o jogador percebia
+	# na fase 3 (especialmente com inimigos lentos como Wireframe Hulk).
+	var spawn_margin: float = 24.0 - float(GameState.stage_index) * 8.0
+	spawn_margin = max(8.0, spawn_margin)
+	var origin := ArenaBounds.random_spawn_point(spawn_margin)
 	# Pattern por era — 16-bit clump caótico, 32-bit linha, 64-bit círculo.
 	var offsets: Array[Vector2] = _spawn_offsets(group_size, origin)
 	for i in group_size:
@@ -114,22 +145,18 @@ func _spawn_offsets(count: int, origin: Vector2) -> Array[Vector2]:
 				else:
 					out.append(Vector2(randf_range(-4.0, 4.0), d))
 		"era_64bit":
-			# Formação circular: 1 no centro + resto em ring ao redor (raio 24px).
+			# Formação circular: 1 no centro + resto em ring achatado (mais
+			# largo horizontalmente que vertical, evita inimigos longe da arena).
 			out.append(Vector2.ZERO)
 			var ring_count: int = count - 1
 			for i in ring_count:
 				var angle: float = TAU * float(i) / float(max(1, ring_count))
-				out.append(Vector2(cos(angle), sin(angle)) * 24.0)
+				out.append(Vector2(cos(angle) * 18.0, sin(angle) * 12.0))
 		_:
 			# Era 16-bit (e fallback): clump aleatório (padrão original).
 			for i in count:
 				out.append(Vector2(randf_range(-20.0, 20.0), randf_range(-20.0, 20.0)))
 	return out
-
-
-func _wave_size() -> int:
-	var t: float = clampf(_time_alive / DIFFICULTY_RAMP_TIME, 0.0, 1.0)
-	return int(roundf(lerpf(1.0, 3.0, t)))
 
 
 func _pick_type() -> String:

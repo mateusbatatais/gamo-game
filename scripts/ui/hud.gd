@@ -48,8 +48,49 @@ func _ready() -> void:
 	_build_warning_label()
 	_build_combo_label()
 	_build_boon_strip()
+	_build_special_indicator()
 	_build_hp_vignette()
 	_connect_signals()
+
+
+## Indicador de charges do Special Power — 3 ícones [X] no canto superior
+## esquerdo abaixo do HP. Sincroniza com SpecialPower.charges_changed.
+var _special_dots: Array[ColorRect] = []
+var _special_key_label: Label
+
+func _build_special_indicator() -> void:
+	var wrap := Control.new()
+	wrap.position = Vector2(8, 70)
+	wrap.size = Vector2(220, 18)
+	add_child(wrap)
+	_special_key_label = Label.new()
+	_special_key_label.text = "[X]"
+	_special_key_label.add_theme_font_size_override("font_size", 11)
+	_special_key_label.add_theme_color_override("font_color", Color("#ffeb3b"))
+	_special_key_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_special_key_label.add_theme_constant_override("outline_size", 2)
+	_special_key_label.position = Vector2(0, 0)
+	_special_key_label.size = Vector2(28, 14)
+	wrap.add_child(_special_key_label)
+	# 3 dots representando charges
+	for i in SpecialPower.MAX_CHARGES:
+		var dot := ColorRect.new()
+		dot.position = Vector2(34 + i * 18, 4)
+		dot.size = Vector2(12, 12)
+		dot.color = Color("#ffeb3b")
+		wrap.add_child(dot)
+		_special_dots.append(dot)
+	SpecialPower.charges_changed.connect(_on_special_charges_changed)
+	_on_special_charges_changed(SpecialPower.charges(), SpecialPower.max_charges())
+
+
+func _on_special_charges_changed(current: int, maximum: int) -> void:
+	for i in _special_dots.size():
+		var has_charge: bool = i < current
+		_special_dots[i].color = Color("#ffeb3b") if has_charge else Color(0.2, 0.2, 0.22, 0.8)
+	if _special_key_label != null:
+		var enabled: bool = current > 0
+		_special_key_label.modulate = Color.WHITE if enabled else Color(0.5, 0.5, 0.55)
 
 
 func _build_boon_strip() -> void:

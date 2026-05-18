@@ -179,6 +179,40 @@ func _make_card(cartridge_id: String, player_cartridges: Dictionary) -> Button:
 	desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(desc)
 
+	# Aviso "SUBSTITUI X" se equipar esse cartucho vai trocar outro do mesmo tipo.
+	var replaced_id: String = CartridgeRegistry.would_replace_for(
+		cartridge_id, player_cartridges
+	)
+	if replaced_id != "":
+		var replaced_def: CartridgeRegistry.CartridgeDef = CartridgeRegistry.get_def(replaced_id)
+		var replaced_name: String = replaced_def.display_name if replaced_def != null else replaced_id
+		var swap_label := Label.new()
+		swap_label.text = "SUBSTITUI: %s" % replaced_name
+		swap_label.add_theme_color_override("font_color", Color("#ff9800"))
+		swap_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		swap_label.add_theme_constant_override("outline_size", 2)
+		swap_label.add_theme_font_size_override("font_size", 11)
+		swap_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		swap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		vbox.add_child(swap_label)
+	# Aviso de consumo de ingredientes em evoluções.
+	elif CartridgeRegistry._is_evolution_result(cartridge_id):
+		var ingredients: Array[String] = CartridgeRegistry.ingredients_for(cartridge_id)
+		if ingredients.size() > 0:
+			var names: Array[String] = []
+			for ing_id in ingredients:
+				var ing_def := CartridgeRegistry.get_def(ing_id)
+				names.append(ing_def.display_name if ing_def != null else ing_id)
+			var consume_label := Label.new()
+			consume_label.text = "CONSOME: %s" % " + ".join(names)
+			consume_label.add_theme_color_override("font_color", Color("#e040fb"))
+			consume_label.add_theme_color_override("font_outline_color", Color.BLACK)
+			consume_label.add_theme_constant_override("outline_size", 2)
+			consume_label.add_theme_font_size_override("font_size", 11)
+			consume_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			consume_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			vbox.add_child(consume_label)
+
 	return btn
 
 

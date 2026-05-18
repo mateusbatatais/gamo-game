@@ -107,6 +107,20 @@ func is_last_stage() -> bool:
 	return stage_index >= stages_in_run.size() - 1
 
 
+## Multiplicador de HP/contact_damage dos inimigos por fase da run.
+## Compensa o snowball do player que mantém cartuchos/level entre fases.
+## Stage 0 = 1.0 (baseline), Stage 1 = 1.6, Stage 2 = 2.4 — cresce ~60% por fase.
+func stage_difficulty_mult() -> float:
+	return 1.0 + float(stage_index) * 0.6
+
+
+## Multiplicador de XP/token drops por fase. Cresce mais devagar pra não
+## inflacionar level-ups, mas o jogador ganha algo a mais por enfrentar fase
+## mais difícil. Stage 0 = 1.0, Stage 1 = 1.15, Stage 2 = 1.3.
+func stage_reward_mult() -> float:
+	return 1.0 + float(stage_index) * 0.15
+
+
 ## Texto "Fase X/Y" pra UI.
 func stage_label() -> String:
 	return "FASE %d/%d" % [stage_index + 1, stages_in_run.size()]

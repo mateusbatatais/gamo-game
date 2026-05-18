@@ -299,10 +299,35 @@ const RARITY_WEIGHTS := {
 ## Cartuchos que NUNCA aparecem no sorteio (só vêm de drops específicos, ex: boss).
 const ROLL_BLACKLIST := ["reset_button"]
 
+## Limites de slot estilo Hades — força o jogador a especializar build.
+## Quando atingido, novos cartuchos do mesmo tipo deixam de aparecer no roll
+## (só level-ups + evoluções continuam).
+const MAX_WEAPON_SLOTS := 3
+const MAX_PASSIVE_SLOTS := 3
+
+
+## Conta cartuchos equipados por tipo. Helper interno pro roll filtrar caps.
+func _count_by_type(player_cartridges: Dictionary) -> Dictionary:
+	var counts := {"weapon": 0, "passive": 0}
+	for id in player_cartridges.keys():
+		var lvl: int = int(player_cartridges[id])
+		if lvl <= 0:
+			continue
+		var def := get_def(id)
+		if def == null:
+			continue
+		if def.type == CartridgeType.WEAPON:
+			counts["weapon"] += 1
+		else:
+			counts["passive"] += 1
+	return counts
+
 
 ## Sorteia 3 cartuchos para oferta de level-up.
 ## Filtra os que o jogador já maxou. Evoluções têm prioridade — sempre incluídas.
-## O sorteio dos restantes usa peso por raridade — legendaries raras.
+## NOTA: novos cartuchos APARECEM mesmo se o slot do tipo está cheio. A escolha
+## do player passa a ser "trocar (substitui o mais antigo)" ou pular o card.
+## O modal mostra "SUBSTITUI X" via would_replace_for() pra comunicar o tradeoff.
 func roll_choices(player_cartridges: Dictionary, count: int = 3) -> Array[String]:
 	var picked: Array[String] = []
 
@@ -314,6 +339,7 @@ func roll_choices(player_cartridges: Dictionary, count: int = 3) -> Array[String
 		picked.append(evo_id)
 
 	# 2. Resto: cartuchos não maxados, com peso por raridade.
+	# Cartuchos de tipo cheio aparecem normalmente — substituição é decisão do player.
 	var available_weights: Dictionary = {}
 	var total_weight: float = 0.0
 	for id in all_ids():
@@ -349,7 +375,63 @@ func roll_choices(player_cartridges: Dictionary, count: int = 3) -> Array[String
 		picked.append(chosen_id)
 		total_weight -= available_weights[chosen_id]
 		available_weights.erase(chosen_id)
+
+	# Garante pelo menos 1 opção "safe" (sem substituição) entre as escolhidas.
+	# Safe = level-up de já equipado, evolução, ou novo com slot livre.
+	# Se todas as 3 escolhidas exigem substituição (player no cap dos 2 tipos),
+	# troca a última por um candidato safe vindo de qualquer cartucho ainda
+	# disponível no registry.
+	if not _has_safe_option(picked, player_cartridges):
+		var safe_id: String = _find_safe_candidate(picked, player_cartridges)
+		if safe_id != "" and picked.size() > 0:
+			picked[picked.size() - 1] = safe_id
 	return picked
+
+
+## True se ao menos 1 dos cartuchos da lista NÃO requer substituição.
+func _has_safe_option(ids: Array[String], player_cartridges: Dictionary) -> bool:
+	for id in ids:
+		if would_replace_for(id, player_cartridges) == "":
+			return true
+	return false
+
+
+## Procura um cartucho "safe" (sem substituição) entre todos os disponíveis.
+## Prioriza level-ups de cartuchos já equipados, depois evoluções, depois
+## novos com slot livre. Retorna "" se realmente não há nenhum safe possível.
+func _find_safe_candidate(exclude: Array[String], player_cartridges: Dictionary) -> String:
+	# 1ª tentativa: level-ups de cartuchos já equipados (sempre safe).
+	for id in player_cartridges.keys():
+		if id in exclude:
+			continue
+		var def := get_def(id)
+		if def == null:
+			continue
+		var lvl: int = int(player_cartridges[id])
+		if lvl > 0 and lvl < def.max_level:
+			return id
+	# 2ª tentativa: evoluções prontas (safe via consumo de ingredientes).
+	var evolutions := available_evolutions(player_cartridges)
+	for evo_id in evolutions:
+		if not (evo_id in exclude):
+			return evo_id
+	# 3ª tentativa: novos com slot livre.
+	for id in all_ids():
+		if id in exclude:
+			continue
+		if id in ROLL_BLACKLIST:
+			continue
+		var def := get_def(id)
+		if def == null:
+			continue
+		if _is_evolution_result(id):
+			continue
+		var current_level: int = player_cartridges.get(id, 0)
+		if current_level >= def.max_level:
+			continue
+		if would_replace_for(id, player_cartridges) == "":
+			return id
+	return ""
 
 
 func _is_evolution_result(cartridge_id: String) -> bool:
@@ -365,6 +447,43 @@ func ingredients_for(evolution_result_id: String) -> Array[String]:
 		if evo.result_id == evolution_result_id:
 			return [evo.ingredient_a, evo.ingredient_b]
 	return []
+
+
+## Retorna o id do cartucho que seria SUBSTITUÍDO se o player equipasse o novo
+## cartucho dado, quando o slot do tipo está cheio. "" se não há substituição:
+## - slot livre,
+## - cartucho já equipado (é só level-up),
+## - cartucho é resultado de evolução (ingredientes são consumidos antes, libera slot).
+##
+## Usado pelo modal de level-up pra mostrar "SUBSTITUI X" no card, e pelo
+## player.equip_cartridge pra fazer o swap automaticamente.
+func would_replace_for(new_cartridge_id: String, player_cartridges: Dictionary) -> String:
+	var def := get_def(new_cartridge_id)
+	if def == null:
+		return ""
+	# Se já tem o cartucho, é level-up, não substitui nada.
+	if int(player_cartridges.get(new_cartridge_id, 0)) > 0:
+		return ""
+	# Evolução: ingredientes são consumidos, libera slot. Sem substituição extra.
+	if _is_evolution_result(new_cartridge_id):
+		return ""
+	var counts := _count_by_type(player_cartridges)
+	# Itera o dict pra achar o PRIMEIRO cartucho do mesmo tipo (oldest = FIFO).
+	if def.type == CartridgeType.WEAPON:
+		if int(counts["weapon"]) < MAX_WEAPON_SLOTS:
+			return ""  ## slot livre, sem substituição
+		for id in player_cartridges.keys():
+			var d := get_def(id)
+			if d != null and d.type == CartridgeType.WEAPON:
+				return id
+	else:
+		if int(counts["passive"]) < MAX_PASSIVE_SLOTS:
+			return ""
+		for id in player_cartridges.keys():
+			var d := get_def(id)
+			if d != null and d.type == CartridgeType.PASSIVE:
+				return id
+	return ""
 
 
 func is_evolution(cartridge_id: String) -> bool:

@@ -20,9 +20,10 @@ const DASH_TRAIL_INTERVAL := 0.03
 const DASH_TRAIL_LIFETIME := 0.35
 const DASH_TRAIL_COLOR := Color("#64b5f6")
 
-# Tiers de evolução visual do GAMO. Trocas em level-up de acordo com EVOLUTION_THRESHOLDS:
-#   tier 1 (sem armadura) → tier 2 (armadura leve) → tier 3 (armadura pesada)
-const EVOLUTION_THRESHOLDS := [5, 10]
+# Tiers de evolução visual do GAMO atrelados à FASE da run (não ao level).
+# Fase 1 (16-bit) = T1 sem armadura. Fase 2 (32-bit CD) = T2 leve. Fase 3
+# (64-bit) = T3 pesada. Narrativamente: GAMO recolhe partes da Coleção
+# enquanto avança e veste a armadura conforme cruza eras.
 const WEAPON_OFFSET := 22.0          # distância da arma ao centro do player (em px-mundo)
 const WEAPON_AIM_RADIUS := 480.0
 
@@ -49,6 +50,7 @@ var sprite: AnimatedSprite2D
 var weapon_sprite: Sprite2D
 var weapon_sprite_secondary: Sprite2D = null  ## ativada pelo cartucho Dual Wield
 var shadow_renderer: Node2D = null  ## sombra elíptica embaixo do player
+var stage_aura: Node2D = null  ## aura radial atrás do player, intensifica por fase
 ## Renderer dos braços (Node2D customizado, definido como inner class abaixo).
 ## Tipado como Node2D em vez de _PlayerArms pra evitar forward reference no parser.
 var arms_renderer: Node2D = null
@@ -140,6 +142,15 @@ func _build_weapon_sprite() -> void:
 	shadow_renderer.z_index = -1
 	add_child(shadow_renderer)
 
+	# Aura de fase — círculo radial atrás do player, intensifica conforme avança
+	# de fase. Pra skins de personagem (Mago, Hacker, etc) que não trocam de
+	# armadura, essa é a única progressão visual. Pra GAMO, soma com a armadura.
+	stage_aura = _PlayerAura.new()
+	stage_aura.z_index = -2  ## atrás da sombra
+	if spirit_palette != null and spirit_palette.has("#"):
+		stage_aura.aura_color = spirit_palette["#"]
+	add_child(stage_aura)
+
 	# Renderizador dos braços — Node2D customizado que desenha linhas do player
 	# até a(s) arma(s). z_index 1 (igual à arma) pra ficar acima do corpo.
 	arms_renderer = _PlayerArms.new()
@@ -175,6 +186,49 @@ func set_dual_wield(active: bool) -> void:
 	elif not active and weapon_sprite_secondary != null:
 		weapon_sprite_secondary.queue_free()
 		weapon_sprite_secondary = null
+
+
+## Aura radial atrás do player que intensifica conforme avança de fase.
+## Fase 1 = invisível (sem aura). Fase 2 = brilho médio. Fase 3 = brilho forte
+## com pulsação. Especialmente importante pra skins de personagem (Mago, Hacker,
+## etc) que não trocam silhueta — única progressão visual que sentem.
+class _PlayerAura extends Node2D:
+	var aura_color: Color = Color(0.4, 0.7, 1.0, 1.0)
+	var phase: float = 0.0
+
+	func _process(delta: float) -> void:
+		phase += delta * 1.4
+		queue_redraw()
+
+	func _draw() -> void:
+		var stage: int = GameState.stage_index  ## 0, 1, 2
+		if stage <= 0:
+			return  ## fase 1 = sem aura
+		# Intensidade base por fase + pulso de respiração.
+		var base_alpha: float = 0.18 if stage == 1 else 0.32
+		var pulse: float = 0.85 + 0.15 * sin(phase)
+		var alpha: float = base_alpha * pulse
+		var center := Vector2(0, -2)
+		# 3 anéis concêntricos com falloff suave pra parecer "glow" pixel-art.
+		var max_r: float = 22.0 if stage == 1 else 28.0
+		for i in 5:
+			var t: float = float(i) / 5.0
+			var r: float = max_r * (1.0 - t * 0.6)
+			var ring_alpha: float = alpha * (1.0 - t * 0.7)
+			_draw_circle_approx(center, r, Color(aura_color.r, aura_color.g, aura_color.b, ring_alpha))
+
+	## Aproxima um círculo cheio com 16 vértices. draw_circle é antialiased,
+	## queremos pixel-art chunky — usa draw_polygon que respeita filter NEAREST.
+	func _draw_circle_approx(center: Vector2, radius: float, color: Color) -> void:
+		var pts: PackedVector2Array = PackedVector2Array()
+		var segs := 16
+		for i in segs:
+			var a: float = TAU * float(i) / float(segs)
+			pts.append(center + Vector2(cos(a) * radius, sin(a) * radius * 0.6))  ## eclipse vertical
+		var cols: PackedColorArray = PackedColorArray()
+		for i in segs:
+			cols.append(color)
+		draw_polygon(pts, cols)
 
 
 ## Sombra elíptica embaixo do player. Pulsa com a respiração e diminui durante
@@ -449,20 +503,22 @@ func _find_secondary_aim_dir(primary_enemy: Enemy, primary_dir: Vector2) -> Vect
 	return -primary_dir
 
 
-## Reage ao signal player_leveled_up trocando a sprite do GAMO quando cruza
-## um limiar de evolução (sem armadura → leve → pesada).
-func _on_level_up_visual(new_level: int) -> void:
-	# Personagens alternativos (Hacker, Chubby, Wizard) mantêm sua silhueta
-	# em todos os níveis — não viram robô armado no level up.
+## Mantido pra compatibilidade do signal `player_leveled_up`, mas tier evolution
+## agora é amarrado à fase (não ao level). Esse handler vira no-op pra GAMO;
+## chamamos `update_visual_tier_for_stage()` quando avança de fase.
+func _on_level_up_visual(_new_level: int) -> void:
+	pass
+
+
+## Troca o sprite do GAMO conforme stage_index. Chamado quando o player spawna
+## numa nova fase (incluindo a fase 1, pra resetar caso uma run anterior tenha
+## terminado em fase 3). Skins de personagem (Hacker, Mago etc) não evoluem —
+## mantêm sua silhueta única.
+func update_visual_tier_for_stage() -> void:
 	var skin_frames: Array = SkinRegistry.active_sprite_frames()
 	if not skin_frames.is_empty() and skin_frames != Sprites.GAMO_T1_IDLE:
 		return
-
-	var target_tier := 1
-	if new_level >= EVOLUTION_THRESHOLDS[1]:
-		target_tier = 3
-	elif new_level >= EVOLUTION_THRESHOLDS[0]:
-		target_tier = 2
+	var target_tier: int = clampi(GameState.stage_index + 1, 1, 3)
 	if target_tier == current_tier:
 		return
 	current_tier = target_tier
@@ -475,8 +531,9 @@ func _on_level_up_visual(new_level: int) -> void:
 		_:
 			frames = Sprites.GAMO_T1_IDLE
 	# Mantém a paleta da skin ativa em todos os tiers de evolução.
-	sprite.sprite_frames = Sprites.make_animation(frames, SkinRegistry.active_palette(), 3.0)
-	sprite.play("default")
+	if sprite != null:
+		sprite.sprite_frames = Sprites.make_animation(frames, SkinRegistry.active_palette(), 3.0)
+		sprite.play("default")
 
 
 func _handle_input(delta: float) -> void:
@@ -499,6 +556,11 @@ func _handle_input(delta: float) -> void:
 
 	if Input.is_action_just_pressed("dash") and _dash_cooldown_timer <= 0.0:
 		_start_dash(input)
+
+	# Special power — tecla X / botão Y do gamepad. Charges limitadas, recarrega
+	# em mini-boss kills. Efeito varia por skin.
+	if Input.is_action_just_pressed("special"):
+		SpecialPower.try_use(self)
 
 
 func _start_dash(input: Vector2) -> void:
@@ -793,6 +855,24 @@ func equip_cartridge(cartridge_id: String) -> void:
 	var current_level: int = equipped_cartridges.get(cartridge_id, 0)
 	if current_level >= def.max_level:
 		return
+
+	# Sacrifício na evolução: se o cartucho é resultado de uma evolução
+	# (ex: Mega Blaster) e está sendo equipado pela primeira vez, os ingredientes
+	# (Star Blaster + Power Glove) são consumidos. Libera slots e força tradeoff
+	# estilo Hades — ganhar a lendária custa as duas bases.
+	if current_level == 0:
+		var ingredients: Array[String] = CartridgeRegistry.ingredients_for(cartridge_id)
+		for ingredient_id in ingredients:
+			if equipped_cartridges.has(ingredient_id):
+				unequip_cartridge(ingredient_id)
+		# Swap automático: se o slot do tipo está cheio, remove o mais antigo
+		# do mesmo tipo (FIFO). O modal já alertou o player com "SUBSTITUI X".
+		var replaced_id: String = CartridgeRegistry.would_replace_for(
+			cartridge_id, equipped_cartridges
+		)
+		if replaced_id != "":
+			unequip_cartridge(replaced_id)
+
 	equipped_cartridges[cartridge_id] = current_level + 1
 
 	if current_level == 0:
@@ -812,6 +892,12 @@ func _instantiate_cartridge(def: CartridgeRegistry.CartridgeDef) -> void:
 	if node.has_method("setup"):
 		node.call("setup", self, 1)
 	cartridge_root.add_child(node)
+
+
+## Estende o invul_timer pelo duration dado (não substitui se já tem mais tempo).
+## Usado pelo SpecialPower e por outros buffs que dão invulnerabilidade temporária.
+func add_invulnerability(duration: float) -> void:
+	_invul_timer = max(_invul_timer, duration)
 
 
 func _level_up_cartridge(cartridge_id: String, new_level: int) -> void:

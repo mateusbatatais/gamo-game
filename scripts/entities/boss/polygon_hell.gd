@@ -30,10 +30,13 @@ var _arena_center: Vector2 = Vector2(320, 180)
 var _hulks_spawned: int = 0
 
 
+var _orbit_phase: float = 0.0
+const ORBIT_RADIUS_BASE := 90.0  ## raio da órbita do boss ao redor do centro
+
 func _init() -> void:
 	max_hp = 3000  # boss final da progressão de 3 fases
 	contact_damage = 32
-	move_speed = 0.0
+	move_speed = 38.0  # move lentamente em órbita + drifts agressivos por fase
 	xp_value = 200
 	token_value = 150
 	body_radius = 30.0
@@ -68,14 +71,34 @@ func _build_visual() -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_phase()
-	# Rotação visual constante
+	# Rotação visual constante do sprite
 	if sprite != null:
 		sprite.rotation += _rotation_speed * delta
+	# Movimento orbital: boss desliza ao redor do centro da arena. Velocidade
+	# angular aumenta conforme a fase (mais frenético no crashing).
+	_orbit_phase += delta * _orbit_speed()
+	var target := _arena_center + Vector2(cos(_orbit_phase), sin(_orbit_phase)) * ORBIT_RADIUS_BASE
+	var dir: Vector2 = (target - global_position)
+	if dir.length() > 1.0:
+		velocity = dir.normalized() * move_speed
+		move_and_slide()
 	_attack_cooldown -= delta
 	if _attack_cooldown <= 0.0:
 		_attack_cooldown = _next_cooldown()
 		_start_attack(_pick_attack())
 	_update_flash(delta)
+
+
+## Velocidade angular da órbita por fase. Stable = lento, crashing = rápido.
+func _orbit_speed() -> float:
+	match _phase:
+		Phase.STABLE:
+			return 0.45
+		Phase.GLITCHING:
+			return 0.70
+		Phase.CRASHING:
+			return 1.05
+	return 0.45
 
 
 func _update_phase() -> void:
